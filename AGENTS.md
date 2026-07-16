@@ -12,12 +12,12 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 
 - Payload CMS project ensure/create helpers  
 - Product config (`create-payload-config.json`) and template Compose defaults  
-- Future: Payload-oriented `xgic` subcommands via entry points  
+- `xgic` subcommands: `dev`, `setup payloadcms`, `schema`, `payload-env`  
 
 ## Out of scope
 
 - Thin CLI framework → https://github.com/xgic/cli  
-- Generic Compose controller → https://github.com/xgic/dev-cli  
+- Generic Compose lifecycle (`up`/`down`/`check`/`env`) → https://github.com/xgic/dev-cli  
 
 ## Rules
 
@@ -27,3 +27,4 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 - Labels required on issues/PRs  
 - Python 3.14+; Apache-2.0; root `CODEOWNERS` (`@xgic`)  
 - Use full product name **Payload CMS** in prose  
+- Prefer `xgic payload-env` for product secrets (do not re-register generic `xgic env`)  
