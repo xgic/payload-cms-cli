@@ -29,7 +29,7 @@ jobs:
       - name: Install core, dev module, and package
         run: |
           python -m pip install --upgrade pip
-          pip install "git+https://github.com/xgic/cli.git@2-extract-shared-core"
+          pip install "git+https://github.com/xgic/cli.git@main"
           pip install "git+https://github.com/xgic/dev-cli.git@main"
           pip install -e ".[dev]"
 
