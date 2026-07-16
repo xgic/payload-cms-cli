@@ -1,6 +1,7 @@
-"""``xgic payload-env`` — product-aware env status and credential regenerate.
+"""``xgic payload env`` — product-aware env status and credential regenerate.
 
-Named distinctly from the generic ``xgic env`` command in ``xgic.cli.dev``.
+Nested under the ``payload`` domain group so it does not clash with the
+generic ``xgic env`` command in ``xgic.cli.dev``.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ def run_payload_env(ctx: CommandContext) -> int:
     else:
         print_info(
             f".env file not found at {ENV_FILE} "
-            "(use: xgic payload-env --regenerate --yes)"
+            "(use: xgic payload env --regenerate --yes)"
         )
     if services_ok:
         print_success("Compose services: appear to be running")

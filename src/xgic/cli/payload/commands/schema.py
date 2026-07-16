@@ -1,4 +1,4 @@
-"""``xgic schema`` — generate create-payload-config JSON schema."""
+"""``xgic payload schema`` — generate create-payload-config JSON schema."""
 
 from __future__ import annotations
 

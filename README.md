@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**XGIC Payload CMS CLI** (`xgic.cli.payload`) provides **Payload CMS–specific** helpers and **`xgic` subcommands** for the modular [XGIC CLI](https://github.com/xgic/cli).
+**XGIC Payload CMS CLI** (`xgic.cli.payload`) provides **Payload CMS–specific** helpers and **`xgic payload …` subcommands** for the modular [XGIC CLI](https://github.com/xgic/cli).
 
 Architecture: [ADR-0005](https://github.com/xgic/ai/blob/main/docs/adr/0005-modular-xgic-cli-and-retirement-of-xde.md).
 
@@ -14,7 +14,7 @@ Architecture: [ADR-0005](https://github.com/xgic/ai/blob/main/docs/adr/0005-modu
 
 ## Status
 
-**0.2.0 — B4 product commands.** Library helpers + registered `xgic` subcommands. Transitional in-tree `xde` may still ship until hard cutover (B5).
+**0.2.0 — B4 product commands.** Library helpers + nested `xgic payload` command group. Transitional in-tree `xde` may still ship until hard cutover (B5).
 
 ## Requirements
 
@@ -28,30 +28,32 @@ Architecture: [ADR-0005](https://github.com/xgic/ai/blob/main/docs/adr/0005-modu
 python -m pip install -e ../cli
 python -m pip install -e ../dev-cli
 python -m pip install -e ".[dev]"
-xgic --help
+xgic payload --help
 ```
 
 ## Console commands
 
+All product commands are nested under **`xgic payload`** (domain ownership; no clash with generic lifecycle).
+
 | Command | Purpose |
 |---------|---------|
-| `xgic dev` | Smart start: compose up if needed, DB check, `pnpm dev` |
-| `xgic setup payloadcms [--quiet]` | Ensure Payload CMS project directory |
-| `xgic schema` | Run template schema generator when present |
-| `xgic payload-env [--json]` | Product env status (project name, .env, services) |
-| `xgic payload-env --regenerate --yes` | Fresh credentials in `.devcontainer/.env` |
+| `xgic payload dev` | Smart start: compose up if needed, DB check, `pnpm dev` |
+| `xgic payload setup [--quiet]` | Ensure Payload CMS project directory |
+| `xgic payload env [--json]` | Product env status (project name, .env, services) |
+| `xgic payload env --regenerate --yes` | Fresh credentials in `.devcontainer/.env` |
+| `xgic payload schema` | Run template schema generator when present |
 
-**Note:** Generic lifecycle (`xgic up`/`down`/`check`/`env`) lives in **dev-cli**.  
-`payload-env` is separate so both modules can install without clashing on `env`.
+**Note:** Generic lifecycle (`xgic up` / `down` / `check` / `env`) lives in **dev-cli**.  
+Use `xgic payload env` for Payload CMS credentials and product status.
 
 ### Command map (transitional `xde` → XGIC CLI)
 
 | Today (`xde`) | Target |
 |---------------|--------|
-| `xde dev` | `xgic dev` |
-| `xde setup payloadcms` | `xgic setup payloadcms` |
-| `xde schema` | `xgic schema` |
-| `xde env --regenerate` | `xgic payload-env --regenerate --yes` |
+| `xde dev` | `xgic payload dev` |
+| `xde setup payloadcms` | `xgic payload setup` |
+| `xde schema` | `xgic payload schema` |
+| `xde env --regenerate` | `xgic payload env --regenerate --yes` |
 | `xde up` / `down` / … | `xgic up` / `down` / … (dev-cli) |
 
 ## Library API

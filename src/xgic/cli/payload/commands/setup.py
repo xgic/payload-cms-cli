@@ -1,4 +1,4 @@
-"""``xgic setup payloadcms`` — ensure Payload CMS project directory."""
+"""``xgic payload setup`` — ensure Payload CMS project directory."""
 
 from __future__ import annotations
 

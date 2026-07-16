@@ -1,4 +1,12 @@
-"""Register ``xgic.cli.payload`` subcommands on the core ``xgic`` CLI."""
+"""Register ``xgic.cli.payload`` subcommands on the core ``xgic`` CLI.
+
+All product commands live under the ``payload`` group for domain ownership::
+
+    xgic payload dev
+    xgic payload setup
+    xgic payload env
+    xgic payload schema
+"""
 
 from __future__ import annotations
 
@@ -14,49 +22,39 @@ def register(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
     """Entry point: ``xgic.cli.commands`` → Payload CMS product commands."""
+    payload = subparsers.add_parser(
+        "payload",
+        help="Payload CMS product commands",
+    )
+    payload_sub = payload.add_subparsers(
+        dest="payload_command",
+        help="Payload CMS action",
+        metavar="ACTION",
+        required=True,
+    )
+
     # Smart daily command (maps from transitional `xde dev`)
-    dev = subparsers.add_parser(
+    dev = payload_sub.add_parser(
         "dev",
         help="Start Payload CMS app dev server (smart: up + db check + pnpm dev)",
     )
     dev.set_defaults(func=run_dev)
 
-    # Schema generator for create-payload-config
-    schema = subparsers.add_parser(
-        "schema",
-        help="Generate create-payload-config JSON schema (template helper)",
-    )
-    schema.add_argument(
-        "--generator",
-        metavar="PATH",
-        help="Override path to generate_schema.py",
-    )
-    schema.set_defaults(func=run_schema)
-
-    # Nested setup (extensible)
-    setup = subparsers.add_parser(
+    # Ensure project directory
+    setup = payload_sub.add_parser(
         "setup",
-        help="Setup / ensure product components",
-    )
-    setup_sub = setup.add_subparsers(
-        dest="setup_command",
-        help="Component to set up",
-        required=True,
-    )
-    payloadcms = setup_sub.add_parser(
-        "payloadcms",
         help="Ensure Payload CMS project exists (idempotent)",
     )
-    payloadcms.add_argument(
+    setup.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress non-error output",
     )
-    payloadcms.set_defaults(func=run_setup_payloadcms)
+    setup.set_defaults(func=run_setup_payloadcms)
 
     # Product env (distinct from generic `xgic env` in xgic.cli.dev)
-    penv = subparsers.add_parser(
-        "payload-env",
+    penv = payload_sub.add_parser(
+        "env",
         help="Payload CMS env status and credential regenerate",
     )
     penv.add_argument(
@@ -85,3 +83,15 @@ def register(
         help="Override path to .env (default .devcontainer/.env)",
     )
     penv.set_defaults(func=run_payload_env)
+
+    # Schema generator for create-payload-config
+    schema = payload_sub.add_parser(
+        "schema",
+        help="Generate create-payload-config JSON schema (template helper)",
+    )
+    schema.add_argument(
+        "--generator",
+        metavar="PATH",
+        help="Override path to generate_schema.py",
+    )
+    schema.set_defaults(func=run_schema)

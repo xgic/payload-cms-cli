@@ -13,19 +13,27 @@ from xgic.cli.payload.commands.setup import run_setup_payloadcms
 from xgic.cli.payload.plugin import register
 
 
-def test_register_commands() -> None:
+def test_register_payload_group_commands() -> None:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command")
     register(sub)
-    for name in ("dev", "schema", "payload-env"):
-        args = parser.parse_args([name])
-        assert args.command == name
+
+    for action in ("dev", "setup", "env", "schema"):
+        args = parser.parse_args(["payload", action])
+        assert args.command == "payload"
+        assert args.payload_command == action
         assert callable(args.func)
-    args = parser.parse_args(["setup", "payloadcms", "--quiet"])
-    assert args.command == "setup"
-    assert args.setup_command == "payloadcms"
+
+    args = parser.parse_args(["payload", "setup", "--quiet"])
     assert args.quiet is True
     assert callable(args.func)
+
+    args = parser.parse_args(
+        ["payload", "env", "--regenerate", "--yes", "--dry-run"]
+    )
+    assert args.regenerate is True
+    assert args.yes is True
+    assert args.dry_run is True
 
 
 def test_run_setup_payloadcms() -> None:

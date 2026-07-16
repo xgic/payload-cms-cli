@@ -1,4 +1,4 @@
-"""``xgic dev`` — smart Payload CMS development server start."""
+"""``xgic payload dev`` — smart Payload CMS development server start."""
 
 from __future__ import annotations
 
