@@ -40,3 +40,33 @@ jobs:
 
       - name: Pytest
         run: pytest -q
+
+  package-smoke:
+    name: Package smoke (uv build + clean install)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Clean-env install (full stack)
+        run: |
+          uv venv .venv-smoke
+          source .venv-smoke/bin/activate
+          uv pip install --upgrade pip
+          uv pip install "git+https://github.com/xgic/cli.git@main"
+          uv pip install "git+https://github.com/xgic/dev-cli.git@main"
+          uv pip install dist/*.whl
+          uv pip install --force-reinstall --no-deps "git+https://github.com/xgic/cli.git@main" || true
+          xgic --version
+          xgic payload --help
+          xgic payload setup --help
+          xgic payload env --help
+          python -c "from xgic.cli import __version__; from xgic.cli.payload import ensure_payload_project; print(__version__)"

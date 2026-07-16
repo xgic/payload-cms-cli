@@ -1,0 +1,140 @@
+# Public Python package release — https://github.com/xgic/ai/blob/main/docs/python-package-release.md
+# Publish after xgic-cli and xgic-dev-cli for the same version line when releasing a stack.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+
+      - name: Build
+        run: uv build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    if: contains(github.ref_name, 'rc')
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/xgic-payload-cms-cli/
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+
+  smoke-testpypi:
+    name: Smoke install (TestPyPI)
+    if: contains(github.ref_name, 'rc')
+    needs: [publish-testpypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install full stack from TestPyPI
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VER="${VERSION#v}"
+          uv venv .venv-smoke
+          source .venv-smoke/bin/activate
+          uv pip install --upgrade pip
+          uv pip install \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            "xgic-cli==${VER}" \
+            "xgic-dev-cli==${VER}" \
+            "xgic-payload-cms-cli==${VER}"
+          xgic --version
+          xgic payload --help
+          python -c "from xgic.cli import __version__; from xgic.cli.payload import ensure_payload_project; print(__version__)"
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/xgic-payload-cms-cli/
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  smoke-pypi:
+    name: Smoke install (PyPI)
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install full stack from PyPI
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VER="${VERSION#v}"
+          uv venv .venv-smoke
+          source .venv-smoke/bin/activate
+          uv pip install --upgrade pip
+          for i in 1 2 3 4 5; do
+            uv pip install \
+              "xgic-cli==${VER}" \
+              "xgic-dev-cli==${VER}" \
+              "xgic-payload-cms-cli==${VER}" && break
+            sleep 15
+          done
+          xgic --version
+          xgic payload --help
+          python -c "from xgic.cli import __version__; from xgic.cli.payload import ensure_payload_project; print(__version__)"

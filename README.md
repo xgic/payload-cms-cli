@@ -6,6 +6,9 @@
 
 Architecture: [ADR-0005](https://github.com/xgic/ai/blob/main/docs/adr/0005-modular-xgic-cli-and-retirement-of-xde.md).
 
+**Publishing to PyPI:** [python-package-release.md](https://github.com/xgic/ai/blob/main/docs/python-package-release.md)  
+(publish **after** `xgic-cli` and `xgic-dev-cli` for stack releases). Tags: `vX.Y.ZrcN` → TestPyPI; `vX.Y.Z` → PyPI.
+
 | Package | Role |
 |---------|------|
 | [xgic/cli](https://github.com/xgic/cli) | Thin core framework (`xgic`) |
