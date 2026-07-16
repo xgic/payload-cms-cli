@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing Guidelines
+    url: https://github.com/xgic/payload-cms-cli/blob/main/CONTRIBUTING.md
+    about: Please read our contribution guidelines before opening an issue.
+  - name: Multi-repo standards
+    url: https://github.com/xgic/ai
+    about: XGIC public multi-repo standards hub.
+  - name: Discussions
+    url: https://github.com/xgic/payload-cms-cli/discussions
+    about: Ask questions and share ideas (not for bugs or tracked feature work).
