@@ -93,3 +93,44 @@ def make_payload_docker_controller(
         project_name=DEFAULT_COMPOSE_PROJECT,
         primary_service=DEFAULT_PRIMARY_SERVICE,
     )
+
+
+def db_ready(
+    docker: DockerComposeController,
+    *,
+    config_file: Path = DEFAULT_CONFIG_FILE,
+) -> bool:
+    """Return True if the active DB service accepts connections."""
+    service = get_db_profile(config_file)
+    if service == "mongodb":
+        try:
+            result = docker._run_compose(  # noqa: SLF001 — intentional thin probe
+                "exec",
+                "-T",
+                service,
+                "mongosh",
+                "--quiet",
+                "--eval",
+                "db.runCommand({ping: 1})",
+                capture_output=True,
+                check=False,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    _, db_user = get_db_config(config_file)
+    try:
+        result = docker._run_compose(  # noqa: SLF001
+            "exec",
+            "-T",
+            "postgres",
+            "pg_isready",
+            "-U",
+            db_user,
+            capture_output=True,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False

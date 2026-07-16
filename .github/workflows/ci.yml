@@ -32,6 +32,8 @@ jobs:
           pip install "git+https://github.com/xgic/cli.git@main"
           pip install "git+https://github.com/xgic/dev-cli.git@main"
           pip install -e ".[dev]"
+          # Domain wheels must not replace core xgic.cli __init__; reassert core last.
+          pip install --force-reinstall --no-deps "git+https://github.com/xgic/cli.git@main"
 
       - name: Ruff
         run: ruff check src tests

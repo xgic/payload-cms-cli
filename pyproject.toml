@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xgic-payload-cms-cli"
-version = "0.1.0"
-description = "XGIC CLI Payload CMS module - project ensure/create helpers and product defaults (xgic.cli.payload)."
+version = "0.2.0"
+description = "XGIC CLI Payload CMS module - product commands and helpers (xgic.cli.payload)."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [
@@ -14,7 +14,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "xgic-cli>=0.2.0",
-    "xgic-dev-cli>=0.1.0",
+    "xgic-dev-cli>=0.2.0",
     "rich>=13.7",
 ]
 keywords = [
@@ -41,6 +41,9 @@ Repository = "https://github.com/xgic/payload-cms-cli"
 Issues = "https://github.com/xgic/payload-cms-cli/issues"
 Documentation = "https://github.com/xgic/payload-cms-cli#readme"
 Changelog = "https://github.com/xgic/payload-cms-cli/releases"
+
+[project.entry-points."xgic.cli.commands"]
+payload = "xgic.cli.payload.plugin:register"
 
 [project.optional-dependencies]
 dev = [
