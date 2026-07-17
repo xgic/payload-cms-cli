@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xgic-payload-cms-cli"
-version = "0.2.0"
+version = "0.2.0rc1"
 description = "XGIC CLI Payload CMS module - product commands and helpers (xgic.cli.payload)."
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -13,8 +13,8 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "xgic-cli>=0.2.0",
-    "xgic-dev-cli>=0.2.0",
+    "xgic-cli>=0.2.0rc1",
+    "xgic-dev-cli>=0.2.0rc1",
     "rich>=13.7",
 ]
 keywords = [
