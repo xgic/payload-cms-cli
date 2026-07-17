@@ -12,7 +12,7 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 
 - Payload CMS project ensure/create helpers  
 - Product config (`create-payload-config.json`) and template Compose defaults  
-- Nested `xgic` subcommands under **`payload`**: `dev`, `setup`, `env`, `schema`  
+- Nested `xgic` subcommands under **`payload`**: `dev`, `setup`, `env`, `schema`, `reset`  
 
 ## Out of scope
 

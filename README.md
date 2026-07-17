@@ -45,6 +45,7 @@ All product commands are nested under **`xgic payload`** (domain ownership; no c
 | `xgic payload env [--json]` | Product env status (project name, .env, services) |
 | `xgic payload env --regenerate --yes` | Fresh credentials in `.devcontainer/.env` |
 | `xgic payload schema` | Run template schema generator when present |
+| `xgic payload reset` | Fast targeted reset (project folder + DB volume) |
 
 **Note:** Generic lifecycle (`xgic up` / `down` / `check` / `env`) lives in **dev-cli**.  
 Use `xgic payload env` for Payload CMS credentials and product status.
@@ -57,6 +58,7 @@ Use `xgic payload env` for Payload CMS credentials and product status.
 | `xde setup payloadcms` | `xgic payload setup` |
 | `xde schema` | `xgic payload schema` |
 | `xde env --regenerate` | `xgic payload env --regenerate --yes` |
+| `xde reset` | `xgic payload reset` |
 | `xde up` / `down` / … | `xgic up` / `down` / … (dev-cli) |
 
 ## Library API
