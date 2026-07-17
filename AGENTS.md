@@ -29,3 +29,4 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 - Use full product name **Payload CMS** in prose  
 - Product commands use space hierarchy: `xgic payload <action>` (not hyphenated top-level)  
 - Do not re-register generic `xgic env`; use `xgic payload env` for product secrets  
+- **PyPI releases:** https://github.com/xgic/ai/blob/main/docs/python-package-release.md (OIDC + PyPA action; `uv` build/smoke)  
