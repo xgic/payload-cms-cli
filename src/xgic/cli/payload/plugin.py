@@ -6,6 +6,7 @@ All product commands live under the ``payload`` group for domain ownership::
     xgic payload setup
     xgic payload env
     xgic payload schema
+    xgic payload reset
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import argparse
 
 from xgic.cli.payload.commands.dev import run_dev
 from xgic.cli.payload.commands.payload_env import run_payload_env
+from xgic.cli.payload.commands.reset import run_reset
 from xgic.cli.payload.commands.schema import run_schema
 from xgic.cli.payload.commands.setup import run_setup_payloadcms
 
@@ -95,3 +97,25 @@ def register(
         help="Override path to generate_schema.py",
     )
     schema.set_defaults(func=run_schema)
+
+    # Targeted reset (project dir + DB volume)
+    reset = payload_sub.add_parser(
+        "reset",
+        help="Fast targeted reset (project folder + active DB volume)",
+    )
+    reset.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip confirmation and proceed",
+    )
+    reset.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show planned actions without making changes",
+    )
+    reset.add_argument(
+        "--rotate-credentials",
+        action="store_true",
+        help="Also regenerate .devcontainer/.env credentials",
+    )
+    reset.set_defaults(func=run_reset)

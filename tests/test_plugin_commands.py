@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 from xgic.cli.app import CommandContext
 from xgic.cli.core.environment import EnvironmentContext, EnvironmentType
 from xgic.cli.payload.commands.dev import run_dev
+from xgic.cli.payload.commands.reset import run_reset
 from xgic.cli.payload.commands.schema import run_schema
 from xgic.cli.payload.commands.setup import run_setup_payloadcms
 from xgic.cli.payload.plugin import register
@@ -18,7 +19,7 @@ def test_register_payload_group_commands() -> None:
     sub = parser.add_subparsers(dest="command")
     register(sub)
 
-    for action in ("dev", "setup", "env", "schema"):
+    for action in ("dev", "setup", "env", "schema", "reset"):
         args = parser.parse_args(["payload", action])
         assert args.command == "payload"
         assert args.payload_command == action
@@ -81,3 +82,29 @@ def test_run_dev_starts_services_when_down() -> None:
         assert run_dev(ctx) == 0
         docker.up.assert_called_once()
         docker.exec.assert_called()
+
+
+def test_run_reset_dry_run() -> None:
+    ns = argparse.Namespace(dry_run=True, yes=False, rotate_credentials=False)
+    ctx = CommandContext(
+        env=EnvironmentContext(env_type=EnvironmentType.HOST),
+        args=ns,
+    )
+    with patch(
+        "xgic.cli.payload.commands.reset.make_payload_docker_controller"
+    ) as make:
+        make.return_value = MagicMock()
+        assert run_reset(ctx) == 0
+
+
+def test_run_reset_requires_yes() -> None:
+    ns = argparse.Namespace(dry_run=False, yes=False, rotate_credentials=False)
+    ctx = CommandContext(
+        env=EnvironmentContext(env_type=EnvironmentType.HOST),
+        args=ns,
+    )
+    with patch(
+        "xgic.cli.payload.commands.reset.make_payload_docker_controller"
+    ) as make:
+        make.return_value = MagicMock()
+        assert run_reset(ctx) == 1
