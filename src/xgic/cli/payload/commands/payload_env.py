@@ -57,9 +57,9 @@ def run_payload_env(ctx: CommandContext) -> int:
             "(use: xgic payload env --regenerate --yes)"
         )
     if services_ok:
-        print_success("Compose services: appear to be running")
+        print_success("Docker Compose services: appear to be running")
     else:
-        print_info("Compose services: not detected as running")
+        print_info("Docker Compose services: not detected as running")
     print_info(f"Configured Payload CMS project: {payload_project}")
     print_info("Environment context: " + ctx.env.describe())
     return 0
