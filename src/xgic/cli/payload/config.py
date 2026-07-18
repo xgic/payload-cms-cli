@@ -86,7 +86,7 @@ def get_db_profile(config_file: Path = DEFAULT_CONFIG_FILE) -> str:
 def make_payload_docker_controller(
     env: EnvironmentContext,
 ) -> DockerComposeController:
-    """Build a Compose controller with Payload CMS template defaults."""
+    """Build a Docker Compose controller with Payload CMS template defaults."""
     return DockerComposeController(
         env=env,
         compose_file=DEFAULT_COMPOSE_FILE,

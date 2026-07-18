@@ -11,13 +11,13 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 ## Scope
 
 - Payload CMS project ensure/create helpers  
-- Product config (`create-payload-config.json`) and template Compose defaults  
+- Product config (`create-payload-config.json`) and template Docker Compose defaults  
 - Nested `xgic` subcommands under **`payload`**: `dev`, `setup`, `env`, `schema`, `reset`  
 
 ## Out of scope
 
 - Thin CLI framework → https://github.com/xgic/cli  
-- Generic Compose lifecycle (`up`/`down`/`check`/`env`) → https://github.com/xgic/dev-cli  
+- Generic Docker Compose lifecycle (`up`/`down`/`check`/`env`) → https://github.com/xgic/dev-cli  
 
 ## Rules
 
