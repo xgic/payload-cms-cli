@@ -21,6 +21,8 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 
 ## Rules
 
+
+**Public GitHub writes:** Before `gh issue create|edit`, `gh pr create|edit`, or any public comment on this repository, complete the **mandatory public-safe draft gate** in https://github.com/xgic/ai/blob/main/docs/BASE-STANDARDS-FOR-ORCHESTRATED-REPOS.md (fictional placeholders only; never name private hosts, private projects, or private tracker IDs). Optional helper from the hub clone: `python scripts/public-safe-scan.py path/to/draft.md`.
 - Public-safe content only  
 - Human UI review before merge to `main`  
 - Dedicated issue-number branches; Conventional Commits  
@@ -30,3 +32,4 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 - Product commands use space hierarchy: `xgic payload <action>` (not hyphenated top-level)  
 - Do not re-register generic `xgic env`; use `xgic payload env` for product secrets  
 - **PyPI releases:** https://github.com/xgic/ai/blob/main/docs/python-package-release.md (OIDC + PyPA action; `uv` build/smoke)  
+
