@@ -15,6 +15,8 @@ from xgic.cli.payload.project import (
     is_payload_project_complete,
     load_create_payload_config,
     resolve_db_connection_string,
+    sync_compose_project_name,
+    validate_compose_project_name,
 )
 
 
@@ -92,9 +94,48 @@ class TestProjectPureHelpers:
         proj.mkdir()
         (proj / "src").mkdir()
         (proj / "src" / "payload.config.ts").write_text("// ok")
+        (tmp_path / ".devcontainer").mkdir()
+        (tmp_path / ".devcontainer" / ".env").write_text("PAYLOAD_SECRET=test\n")
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(
             "xgic.cli.payload.project.load_create_payload_config",
             lambda *a, **k: {"projectName": "complete-site"},
         )
         assert ensure_payload_project() == 0
+
+    def test_validate_compose_project_name(self) -> None:
+        assert validate_compose_project_name("Website") == "website"
+        with pytest.raises(ValueError):
+            validate_compose_project_name("-bad")
+
+    def test_sync_compose_project_name(self, tmp_path: Path) -> None:
+        compose = tmp_path / "docker-compose.yml"
+        compose.write_text("name: old-name\nservices: {}\n")
+        assert sync_compose_project_name("my-app", compose_path=compose) is True
+        assert "name: my-app" in compose.read_text()
+
+    def test_ensure_fails_when_create_payload_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".devcontainer").mkdir()
+        (tmp_path / ".devcontainer" / ".env").write_text("PAYLOAD_SECRET=test\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.load_create_payload_config",
+            lambda *a, **k: {
+                "projectName": "fail-app",
+                "template": "website",
+                "dbAdapter": "postgres",
+                "agent": "none",
+                "dbUri": "",
+            },
+        )
+
+        class FakeResult:
+            returncode = 7
+
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.subprocess.run",
+            lambda *a, **k: FakeResult(),
+        )
+        assert ensure_payload_project(quiet=True) == 7
