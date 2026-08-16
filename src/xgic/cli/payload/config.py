@@ -13,8 +13,9 @@ from typing import Any
 from xgic.cli.core.environment import EnvironmentContext
 from xgic.cli.dev.docker import DockerComposeController
 
-DEFAULT_COMPOSE_PROJECT = "xgic-payload-cms-dev-containers"
-DEFAULT_PRIMARY_SERVICE = "xgic-payload-cms-dev-containers"
+# Match producer + thin template Compose service names (not legacy *-dev-containers).
+DEFAULT_COMPOSE_PROJECT = "xgic-payload-cms-dev"
+DEFAULT_PRIMARY_SERVICE = "xgic-payload-cms-dev"
 DEFAULT_CONFIG_FILE = Path(".devcontainer/create-payload-config.json")
 DEFAULT_COMPOSE_FILE = ".devcontainer/docker-compose.yml"
 
