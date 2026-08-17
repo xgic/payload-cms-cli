@@ -13,8 +13,8 @@ from typing import Any
 
 from xgic.cli.payload.config import (
     DEFAULT_COMPOSE_FILE,
-    DEFAULT_CONFIG_FILE,
     DEFAULT_COMPOSE_PROJECT,
+    DEFAULT_CONFIG_FILE,
     db_ready,
     get_db_profile,
     make_payload_docker_controller,
