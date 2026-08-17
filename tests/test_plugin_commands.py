@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from xgic.cli.app import CommandContext
@@ -61,7 +62,24 @@ def test_run_schema_missing_generator(tmp_path, monkeypatch) -> None:
     assert run_schema(ctx) == 1
 
 
-def test_run_dev_starts_services_when_down() -> None:
+def test_run_dev_requires_setup() -> None:
+    ns = argparse.Namespace()
+    env = EnvironmentContext(env_type=EnvironmentType.HOST)
+    ctx = CommandContext(env=env, args=ns)
+    with (
+        patch(
+            "xgic.cli.payload.commands.dev.is_payload_project_complete",
+            return_value=False,
+        ),
+        patch(
+            "xgic.cli.payload.commands.dev.resolve_project_dir",
+            return_value=Path("app"),
+        ),
+    ):
+        assert run_dev(ctx) == 1
+
+
+def test_run_dev_when_ready_on_host() -> None:
     ns = argparse.Namespace()
     env = EnvironmentContext(env_type=EnvironmentType.HOST)
     ctx = CommandContext(env=env, args=ns)
@@ -71,18 +89,25 @@ def test_run_dev_starts_services_when_down() -> None:
         ) as make,
         patch("xgic.cli.payload.commands.dev.db_ready", return_value=True),
         patch(
-            "xgic.cli.payload.commands.dev.get_payload_project_name",
-            return_value="site",
+            "xgic.cli.payload.commands.dev.is_payload_project_complete",
+            return_value=True,
         ),
+        patch(
+            "xgic.cli.payload.commands.dev.resolve_project_dir",
+            return_value=Path("app"),
+        ),
+        patch(
+            "xgic.cli.payload.commands.dev._app_cwd",
+            return_value=Path("/tmp/app"),
+        ),
+        patch("pathlib.Path.is_file", return_value=True),
     ):
         docker = MagicMock()
-        docker.services_running.return_value = False
         docker.exec.return_value = MagicMock(returncode=0)
         make.return_value = docker
         assert run_dev(ctx) == 0
-        docker.up.assert_called_once()
         docker.exec.assert_called()
-
+        docker.up.assert_not_called()
 
 def test_run_reset_dry_run() -> None:
     ns = argparse.Namespace(dry_run=True, yes=False, rotate_credentials=False)

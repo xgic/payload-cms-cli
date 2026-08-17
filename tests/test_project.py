@@ -65,6 +65,7 @@ class TestProjectPureHelpers:
         cfg = load_create_payload_config(tmp_path / "no-config.json")
         assert cfg["projectName"] == "my-payload-cms"
         assert cfg["dbAdapter"] == "postgres"
+        assert cfg["layout"] == "auto"
 
     def test_resolve_db_connection_string(self) -> None:
         assert (
@@ -82,15 +83,20 @@ class TestProjectPureHelpers:
         assert "PAYLOAD_SECRET=newsec" in result
 
     def test_build_create_payload_command_basic(self) -> None:
-        cmd = build_create_payload_command("website")
+        cmd = build_create_payload_command("app")
         assert "create-payload-app@latest" in cmd
+        assert "app" in cmd
         assert "--use-pnpm" in cmd
         assert "--no-agent" in cmd
+
+    def test_build_create_payload_command_root(self) -> None:
+        cmd = build_create_payload_command(".")
+        assert cmd[2] == "."
 
     def test_ensure_idempotent_on_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        proj = tmp_path / "complete-site"
+        proj = tmp_path / "app"
         proj.mkdir()
         (proj / "src").mkdir()
         (proj / "src" / "payload.config.ts").write_text("// ok")
@@ -99,7 +105,15 @@ class TestProjectPureHelpers:
         monkeypatch.chdir(tmp_path)
         monkeypatch.setattr(
             "xgic.cli.payload.project.load_create_payload_config",
-            lambda *a, **k: {"projectName": "complete-site"},
+            lambda *a, **k: {
+                "projectName": "my-payload-cms",
+                "projectDir": "app",
+                "layout": "subdir",
+            },
+        )
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.ensure_db_services",
+            lambda **k: 0,
         )
         assert ensure_payload_project() == 0
 
@@ -124,11 +138,17 @@ class TestProjectPureHelpers:
             "xgic.cli.payload.project.load_create_payload_config",
             lambda *a, **k: {
                 "projectName": "fail-app",
+                "projectDir": "app",
+                "layout": "subdir",
                 "template": "website",
                 "dbAdapter": "postgres",
                 "agent": "none",
                 "dbUri": "",
             },
+        )
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.ensure_db_services",
+            lambda **k: 0,
         )
 
         class FakeResult:
@@ -139,3 +159,35 @@ class TestProjectPureHelpers:
             lambda *a, **k: FakeResult(),
         )
         assert ensure_payload_project(quiet=True) == 7
+
+    def test_ensure_missing_tool_message(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".devcontainer").mkdir()
+        (tmp_path / ".devcontainer" / ".env").write_text("PAYLOAD_SECRET=test\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.load_create_payload_config",
+            lambda *a, **k: {
+                "projectName": "x",
+                "projectDir": "app",
+                "layout": "subdir",
+                "template": "website",
+                "dbAdapter": "postgres",
+                "agent": "none",
+                "dbUri": "",
+            },
+        )
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.ensure_db_services",
+            lambda **k: 0,
+        )
+
+        def boom(*a, **k):
+            raise FileNotFoundError("pnpx")
+
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.subprocess.run",
+            boom,
+        )
+        assert ensure_payload_project(quiet=True) == 1

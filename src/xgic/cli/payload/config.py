@@ -23,7 +23,7 @@ DEFAULT_COMPOSE_FILE = ".devcontainer/docker-compose.yml"
 def get_payload_project_name(
     config_file: Path = DEFAULT_CONFIG_FILE,
 ) -> str:
-    """Return the name of the generated Payload CMS project folder."""
+    """Return projectName identity (npm/display; not always the filesystem path)."""
     if config_file.exists():
         try:
             with open(config_file, encoding="utf-8") as f:
@@ -33,6 +33,16 @@ def get_payload_project_name(
         except (json.JSONDecodeError, OSError):
             pass
     return "my-payload-cms"
+
+
+def get_payload_project_dir(
+    config_file: Path = DEFAULT_CONFIG_FILE,
+) -> Path:
+    """Return resolved app directory Path (see layout.resolve_project_dir)."""
+    from xgic.cli.payload.layout import resolve_project_dir
+    from xgic.cli.payload.project import load_create_payload_config
+
+    return resolve_project_dir(load_create_payload_config(config_file))
 
 
 def get_db_config(
