@@ -51,6 +51,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          git fetch --tags --force origin
           FINAL="${TAG#v}"
           mapfile -t RCS < <(git tag -l "v${FINAL}rc*" 2>/dev/null || true)
           if [[ ${#RCS[@]} -eq 0 ]]; then
