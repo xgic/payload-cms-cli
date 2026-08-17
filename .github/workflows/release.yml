@@ -2,6 +2,7 @@
 # Publish after xgic-cli and xgic-dev-cli for the same version line when releasing a stack.
 
 name: Release
+# Final vX.Y.Z requires prior vX.Y.Zrc* (require-prior-rc job).
 
 on:
   push:
@@ -32,6 +33,34 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
+
+
+  # Final tags (no "rc") must have a prior matching RC tag
+  # (https://github.com/xgic/ai/blob/main/docs/python-package-release.md §8.1).
+  require-prior-rc:
+    name: Require prior RC tag
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail final release without vX.Y.Zrc* tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          FINAL="${TAG#v}"
+          mapfile -t RCS < <(git tag -l "v${FINAL}rc*" 2>/dev/null || true)
+          if [[ ${#RCS[@]} -eq 0 ]]; then
+            echo "::error::Final tag ${TAG} requires a prior RC tag matching v${FINAL}rc* (e.g. v${FINAL}rc1)."
+            echo "Standard process (https://github.com/xgic/ai/blob/main/docs/python-package-release.md):"
+            echo "  1) Set version ${FINAL}rc1 in pyproject.toml; tag v${FINAL}rc1; wait for TestPyPI smoke"
+            echo "  2) Set version ${FINAL}; tag v${FINAL}"
+            exit 1
+          fi
+          echo "Prior RC tag(s) for ${FINAL}: ${RCS[*]}"
 
   publish-testpypi:
     name: Publish to TestPyPI
@@ -90,7 +119,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     if: ${{ !contains(github.ref_name, 'rc') }}
-    needs: [build]
+    needs: [build, require-prior-rc]
     runs-on: ubuntu-latest
     environment:
       name: pypi
