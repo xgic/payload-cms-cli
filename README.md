@@ -53,9 +53,9 @@ One brand (`xgic`), clear ownership, and dry-run-friendly destructive paths.
 
 ```bash
 uv pip install \
-  "xgic-cli>=0.2.0" \
-  "xgic-dev-cli>=0.2.0" \
-  "xgic-payload-cms-cli>=0.2.0"
+  "xgic-cli>=0.2.0,<0.3" \
+  "xgic-dev-cli>=0.2.0,<0.3" \
+  "xgic-payload-cms-cli>=0.2.1,<0.3"
 xgic payload --help
 ```
 
@@ -72,8 +72,9 @@ xgic payload --help
 
 ```bash
 xgic check
-xgic up --profile postgres
-xgic payload env
+xgic payload env --regenerate --yes   # once
+xgic payload setup                    # scaffold app (layout from config)
+xgic up --profile postgres            # DB if needed
 xgic payload dev
 ```
 
