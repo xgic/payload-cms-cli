@@ -281,11 +281,14 @@ def ensure_db_services(*, quiet: bool = False, wait_seconds: float = 45.0) -> in
 
     if not quiet:
         print_info(
-            f"Starting database service only: profile={profile!r}, "
-            f"service={profile!r} (project {compose_project!r})"
+            f"Starting database service only: service={profile!r} "
+            f"(project {compose_project!r})"
         )
     try:
-        docker.up(profile=profile, services=[profile])
+        # Start the named service without forcing --profile. Services that use
+        # profiles still start when listed by name if already enabled; services
+        # without profiles (e.g. always-on postgres) work without a profile flag.
+        docker.up(services=[profile])
     except FileNotFoundError:
         print_warning(
             "docker not found. Run setup inside the Dev Container "

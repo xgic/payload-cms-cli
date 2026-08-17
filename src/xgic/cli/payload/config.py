@@ -35,15 +35,49 @@ def get_payload_project_name(
     return "my-payload-cms"
 
 
+def _is_compose_safe_name(name: str) -> bool:
+    """Return True if *name* looks safe for Docker Compose project names."""
+    if not name or not name[0].isalnum():
+        return False
+    return all(c.isalnum() or c in "_-" for c in name) and len(name) <= 63
+
+
+def _compose_name_from_file(
+    compose_path: Path = Path(DEFAULT_COMPOSE_FILE),
+) -> str | None:
+    """Parse top-level ``name:`` from a Compose file (best-effort)."""
+    if not compose_path.is_file():
+        return None
+    try:
+        for line in compose_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") or not stripped.startswith("name:"):
+                continue
+            raw = stripped.split(":", 1)[1].strip().strip("\"'")
+            if raw and _is_compose_safe_name(raw.lower()):
+                return raw.lower()
+    except OSError:
+        return None
+    return None
+
+
 def get_compose_project_name(
     config_file: Path = DEFAULT_CONFIG_FILE,
 ) -> str:
     """Return Docker Compose project name for this workspace.
 
-    Prefers ``composeProjectName`` in create-payload-config.json so private
-    apps (e.g. corporate website) can avoid clashing with the producer default
-    ``xgic-payload-cms-dev``. Falls back to ``DEFAULT_COMPOSE_PROJECT``.
+    Precedence:
+    1. ``XGIC_COMPOSE_PROJECT`` environment variable
+    2. ``composeProjectName`` in create-payload-config.json
+    3. Top-level ``name:`` in ``.devcontainer/docker-compose.yml``
+    4. ``DEFAULT_COMPOSE_PROJECT`` (producer template default)
     """
+    import os
+
+    env_name = os.environ.get("XGIC_COMPOSE_PROJECT", "").strip().lower()
+    if env_name and _is_compose_safe_name(env_name):
+        return env_name
+
     if config_file.exists():
         try:
             with open(config_file, encoding="utf-8") as f:
@@ -51,15 +85,16 @@ def get_compose_project_name(
             raw = data.get("composeProjectName")
             if isinstance(raw, str) and raw.strip():
                 name = raw.strip().lower()
-                # Light validation (Compose-safe); invalid → default
-                if name[0].isalnum() and all(
-                    c.isalnum() or c in "_-" for c in name
-                ):
-                    return name[:63]
+                if _is_compose_safe_name(name):
+                    return name
         except (json.JSONDecodeError, OSError):
             pass
-    return DEFAULT_COMPOSE_PROJECT
 
+    from_file = _compose_name_from_file()
+    if from_file:
+        return from_file
+
+    return DEFAULT_COMPOSE_PROJECT
 
 def get_payload_project_dir(
     config_file: Path = DEFAULT_CONFIG_FILE,
