@@ -5,6 +5,7 @@ from xgic.cli.payload.config import (
     DEFAULT_CONFIG_FILE,
     DEFAULT_PRIMARY_SERVICE,
     db_ready,
+    get_compose_project_name,
     get_db_config,
     get_db_profile,
     get_payload_project_name,
@@ -20,7 +21,7 @@ from xgic.cli.payload.project import (
     load_create_payload_config,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.2"
 
 __all__ = [
     "DEFAULT_COMPOSE_PROJECT",
@@ -30,6 +31,7 @@ __all__ = [
     "db_ready",
     "ensure_payload_project",
     "generate_fresh_env_content",
+    "get_compose_project_name",
     "get_db_config",
     "get_db_profile",
     "get_payload_project_name",

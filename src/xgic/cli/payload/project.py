@@ -13,9 +13,9 @@ from typing import Any
 
 from xgic.cli.payload.config import (
     DEFAULT_COMPOSE_FILE,
-    DEFAULT_COMPOSE_PROJECT,
     DEFAULT_CONFIG_FILE,
     db_ready,
+    get_compose_project_name,
     get_db_profile,
     make_payload_docker_controller,
 )
@@ -35,6 +35,7 @@ def load_create_payload_config(
         "projectName": "my-payload-cms",
         "projectDir": None,
         "layout": "auto",
+        "composeProjectName": None,
         "template": "website",
         "dbAdapter": "postgres",
         "agent": "none",
@@ -269,9 +270,8 @@ def ensure_db_services(*, quiet: bool = False, wait_seconds: float = 45.0) -> in
 
     env = EnvironmentContext.detect()
     docker = make_payload_docker_controller(env)
-    # Prefer stable default project name over config projectName for the
-    # Dev Container stack (matches compose file + VS Code project).
-    docker.project_name = DEFAULT_COMPOSE_PROJECT
+    compose_project = get_compose_project_name()
+    docker.project_name = compose_project
     profile = get_db_profile()
 
     if db_ready(docker):
@@ -282,7 +282,7 @@ def ensure_db_services(*, quiet: bool = False, wait_seconds: float = 45.0) -> in
     if not quiet:
         print_info(
             f"Starting database service only: profile={profile!r}, "
-            f"service={profile!r} (project {DEFAULT_COMPOSE_PROJECT!r})"
+            f"service={profile!r} (project {compose_project!r})"
         )
     try:
         docker.up(profile=profile, services=[profile])
@@ -329,15 +329,17 @@ def ensure_payload_project(*, quiet: bool = False) -> int:
     project_dir = resolve_project_dir(cfg)
     target = create_payload_target_arg(project_dir)
 
+    # First-run: create .devcontainer/.env when missing (no separate
+    # `xgic payload env --regenerate --yes` step required).
     env_rc = ensure_devcontainer_env(quiet=quiet)
     if env_rc != 0:
         return env_rc
 
-    # Keep Compose project name aligned with the Dev Container stack default
-    # (not the npm projectName), so CLI and VS Code share one project.
-    if sync_compose_project_name(DEFAULT_COMPOSE_PROJECT) and not quiet:
+    # Compose project name from config (composeProjectName), not npm projectName.
+    compose_project = get_compose_project_name()
+    if sync_compose_project_name(compose_project) and not quiet:
         print_info(
-            f"Docker Compose project name set to {DEFAULT_COMPOSE_PROJECT!r} "
+            f"Docker Compose project name set to {compose_project!r} "
             f"in {DEFAULT_COMPOSE_FILE}"
         )
 

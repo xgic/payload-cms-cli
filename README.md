@@ -70,13 +70,20 @@ xgic payload --help
 
 ### Typical Payload session (inside a Dev Container)
 
+**First session** (one setup command — creates `.devcontainer/.env` if missing, starts the DB profile, scaffolds the app):
+
 ```bash
-xgic check
-xgic payload env --regenerate --yes   # once
-xgic payload setup                    # scaffold app (layout from config)
-xgic up --profile postgres            # DB if needed
+xgic payload setup
 xgic payload dev
 ```
+
+**Daily** (after the app exists):
+
+```bash
+xgic payload dev
+```
+
+Optional: `xgic payload env` (status), `xgic payload env --regenerate --yes` (rotate credentials only — not required for first setup).
 
 Prefer the end-user template for application work: [payload-cms](https://github.com/xgic/payload-cms).
 
@@ -89,9 +96,9 @@ All product commands nest under **`xgic payload`**:
 | Command | Purpose |
 |---------|---------|
 | `xgic payload dev` | **Primary daily command** — smart start (up if needed, DB check, `pnpm dev`) |
-| `xgic payload setup [--quiet]` | Ensure Payload project directory (idempotent) |
+| `xgic payload setup [--quiet]` | **First-run one-shot:** env (if missing) + DB profile + scaffold (idempotent) |
 | `xgic payload env [--json]` | Product env status (project name, `.env`, services) |
-| `xgic payload env --regenerate --yes` | Fresh credentials in `.devcontainer/.env` |
+| `xgic payload env --regenerate --yes` | Rotate credentials in `.devcontainer/.env` (optional; setup creates env when absent) |
 | `xgic payload schema` | Run template schema generator when present |
 | `xgic payload reset` | Fast targeted reset (project folder + active DB volume) |
 

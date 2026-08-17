@@ -9,6 +9,7 @@ from xgic.cli.payload.config import (
     DEFAULT_COMPOSE_PROJECT,
     DEFAULT_CONFIG_FILE,
     DEFAULT_PRIMARY_SERVICE,
+    get_compose_project_name,
     get_db_config,
     get_db_profile,
     get_payload_project_name,
@@ -21,6 +22,18 @@ def test_compose_defaults_match_template_contract() -> None:
     assert DEFAULT_PRIMARY_SERVICE == "xgic-payload-cms-dev"
     assert DEFAULT_COMPOSE_FILE == ".devcontainer/docker-compose.yml"
     assert DEFAULT_CONFIG_FILE.as_posix() == ".devcontainer/create-payload-config.json"
+
+
+def test_get_compose_project_name_from_config(tmp_path, monkeypatch) -> None:
+    cfg = tmp_path / "create-payload-config.json"
+    cfg.write_text('{"composeProjectName": "xgic-website-pri-dev"}')
+    monkeypatch.chdir(tmp_path)
+    # Function reads DEFAULT_CONFIG_FILE relative path under .devcontainer/
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text(
+        '{"composeProjectName": "xgic-website-pri-dev"}'
+    )
+    assert get_compose_project_name() == "xgic-website-pri-dev"
 
 
 def test_get_payload_project_name_fallback(tmp_path: Path) -> None:

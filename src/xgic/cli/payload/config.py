@@ -35,6 +35,32 @@ def get_payload_project_name(
     return "my-payload-cms"
 
 
+def get_compose_project_name(
+    config_file: Path = DEFAULT_CONFIG_FILE,
+) -> str:
+    """Return Docker Compose project name for this workspace.
+
+    Prefers ``composeProjectName`` in create-payload-config.json so private
+    apps (e.g. corporate website) can avoid clashing with the producer default
+    ``xgic-payload-cms-dev``. Falls back to ``DEFAULT_COMPOSE_PROJECT``.
+    """
+    if config_file.exists():
+        try:
+            with open(config_file, encoding="utf-8") as f:
+                data: dict[str, Any] = json.load(f)
+            raw = data.get("composeProjectName")
+            if isinstance(raw, str) and raw.strip():
+                name = raw.strip().lower()
+                # Light validation (Compose-safe); invalid → default
+                if name[0].isalnum() and all(
+                    c.isalnum() or c in "_-" for c in name
+                ):
+                    return name[:63]
+        except (json.JSONDecodeError, OSError):
+            pass
+    return DEFAULT_COMPOSE_PROJECT
+
+
 def get_payload_project_dir(
     config_file: Path = DEFAULT_CONFIG_FILE,
 ) -> Path:
@@ -101,7 +127,7 @@ def make_payload_docker_controller(
     return DockerComposeController(
         env=env,
         compose_file=DEFAULT_COMPOSE_FILE,
-        project_name=DEFAULT_COMPOSE_PROJECT,
+        project_name=get_compose_project_name(),
         primary_service=DEFAULT_PRIMARY_SERVICE,
     )
 
