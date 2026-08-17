@@ -8,9 +8,9 @@ from pathlib import Path
 from xgic.cli.app import CommandContext
 from xgic.cli.core.environment import EnvironmentType
 from xgic.cli.payload.config import (
-    DEFAULT_COMPOSE_PROJECT,
     DEFAULT_PRIMARY_SERVICE,
     db_ready,
+    get_compose_project_name,
     get_db_profile,
     make_payload_docker_controller,
 )
@@ -49,7 +49,7 @@ def run_dev(ctx: CommandContext) -> int:
     print_info(f"App location: {display_project_location(project_dir)}")
 
     docker = make_payload_docker_controller(env)
-    docker.project_name = DEFAULT_COMPOSE_PROJECT
+    docker.project_name = get_compose_project_name()
     profile = get_db_profile()
 
     # Never recreate the primary Dev Container service; only ensure DB.

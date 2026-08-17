@@ -9,6 +9,7 @@ from xgic.cli.payload.config import (
     DEFAULT_COMPOSE_PROJECT,
     DEFAULT_CONFIG_FILE,
     DEFAULT_PRIMARY_SERVICE,
+    get_compose_project_name,
     get_db_config,
     get_db_profile,
     get_payload_project_name,
@@ -21,6 +22,34 @@ def test_compose_defaults_match_template_contract() -> None:
     assert DEFAULT_PRIMARY_SERVICE == "xgic-payload-cms-dev"
     assert DEFAULT_COMPOSE_FILE == ".devcontainer/docker-compose.yml"
     assert DEFAULT_CONFIG_FILE.as_posix() == ".devcontainer/create-payload-config.json"
+
+
+def test_get_compose_project_name_from_config(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("XGIC_COMPOSE_PROJECT", raising=False)
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text(
+        '{"composeProjectName": "xgic-website-pri-dev"}'
+    )
+    assert get_compose_project_name() == "xgic-website-pri-dev"
+
+
+def test_get_compose_project_name_from_env(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XGIC_COMPOSE_PROJECT", "xgic-website-pri-dev")
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text("{}")
+    assert get_compose_project_name() == "xgic-website-pri-dev"
+
+
+def test_get_compose_project_name_from_compose_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("XGIC_COMPOSE_PROJECT", raising=False)
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "docker-compose.yml").write_text(
+        "name: xgic-website-pri-dev\nservices: {}\n"
+    )
+    assert get_compose_project_name() == "xgic-website-pri-dev"
 
 
 def test_get_payload_project_name_fallback(tmp_path: Path) -> None:
