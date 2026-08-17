@@ -161,17 +161,27 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           # Domain module may release independently of core/dev (same major.minor series).
+          # Retry + --refresh: PyPI CDN lag and uv cache can miss a just-published version.
           VER="${VERSION#v}"
           uv venv .venv-smoke
           source .venv-smoke/bin/activate
           uv pip install --upgrade pip
-          for i in 1 2 3 4 5; do
-            uv pip install \
+          ok=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if uv pip install --refresh \
               "xgic-cli>=0.2.0,<0.3" \
               "xgic-dev-cli>=0.2.0,<0.3" \
-              "xgic-payload-cms-cli==${VER}" && break
-            sleep 15
+              "xgic-payload-cms-cli==${VER}"; then
+              ok=1
+              break
+            fi
+            echo "PyPI install attempt ${i} failed; sleeping 20s..."
+            sleep 20
           done
+          if [[ "${ok}" -ne 1 ]]; then
+            echo "::error::Failed to install xgic-payload-cms-cli==${VER} from PyPI after retries"
+            exit 1
+          fi
           xgic --version
           xgic payload --help
           python -c "from xgic.cli import __version__; from xgic.cli.payload import ensure_payload_project; print(__version__)"
