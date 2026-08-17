@@ -5,10 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 
 from xgic.cli.payload.config import (
+    DEFAULT_COMPOSE_FILE,
+    DEFAULT_COMPOSE_PROJECT,
+    DEFAULT_CONFIG_FILE,
+    DEFAULT_PRIMARY_SERVICE,
     get_db_config,
     get_db_profile,
     get_payload_project_name,
 )
+
+
+def test_compose_defaults_match_template_contract() -> None:
+    """Defaults must match producer/template service names (not legacy *-dev-containers)."""
+    assert DEFAULT_COMPOSE_PROJECT == "xgic-payload-cms-dev"
+    assert DEFAULT_PRIMARY_SERVICE == "xgic-payload-cms-dev"
+    assert DEFAULT_COMPOSE_FILE == ".devcontainer/docker-compose.yml"
+    assert DEFAULT_CONFIG_FILE.as_posix() == ".devcontainer/create-payload-config.json"
 
 
 def test_get_payload_project_name_fallback(tmp_path: Path) -> None:
