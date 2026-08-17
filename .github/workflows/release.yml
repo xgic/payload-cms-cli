@@ -103,6 +103,9 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           # Domain module may release independently of core/dev (same major.minor series).
+          # --index-strategy unsafe-best-match: package also exists on PyPI (older
+          # finals); without it, uv ignores the RC on TestPyPI once PyPI has the name.
+          # --prerelease allow: required for X.Y.ZrcN pins.
           VER="${VERSION#v}"
           uv venv .venv-smoke
           source .venv-smoke/bin/activate
@@ -110,6 +113,8 @@ jobs:
           uv pip install \
             --index-url https://test.pypi.org/simple/ \
             --extra-index-url https://pypi.org/simple/ \
+            --index-strategy unsafe-best-match \
+            --prerelease allow \
             "xgic-cli>=0.2.0,<0.3" \
             "xgic-dev-cli>=0.2.0,<0.3" \
             "xgic-payload-cms-cli==${VER}"
