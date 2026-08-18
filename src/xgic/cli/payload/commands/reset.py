@@ -97,7 +97,7 @@ def run_reset(ctx: CommandContext) -> int:
         print_info("Rotating credentials (--rotate-credentials)...")
         rc = perform_env_regenerate(yes=True)
         if rc == 0:
-            print_success("Credentials rotated in .env.")
+            print_success("Credentials rotated in compose and app .env.")
         else:
             print_warning("Credential rotation had issues (check .env).")
 

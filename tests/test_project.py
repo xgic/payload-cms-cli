@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from xgic.cli.payload.env_helpers import compute_synced_project_env_content
 from xgic.cli.payload.project import (
     build_create_payload_command,
-    compute_synced_project_env_content,
     ensure_payload_project,
     get_project_name,
     is_payload_project_complete,
@@ -81,6 +81,7 @@ class TestProjectPureHelpers:
         )
         assert "DATABASE_URL=newdb" in result
         assert "PAYLOAD_SECRET=newsec" in result
+        assert "DATABASE_URI=" not in result
 
     def test_build_create_payload_command_basic(self) -> None:
         cmd = build_create_payload_command("app")
