@@ -83,7 +83,7 @@ xgic payload dev
 xgic payload dev
 ```
 
-Optional: `xgic payload env` (status), `xgic payload env --regenerate --yes` (rotate credentials in `.devcontainer/.env` **and** sync the app `.env` — not required for first setup). Recreate the Compose DB volume if it was initialized with the previous password.
+Optional: `xgic payload env` (status), `xgic payload env --regenerate --yes` (rewrite credentials in `.devcontainer/.env` **and** sync the app `.env` — not required for first setup). Regenerate does **not** delete Compose DB volume data; it also does **not** change the password already stored in that volume—recreate the volume (`xgic payload reset --yes`, destructive) or update the DB role to match. Non-destructive live rotation is tracked separately.
 
 Prefer the end-user template for application work: [payload-cms](https://github.com/xgic/payload-cms).
 
@@ -98,7 +98,7 @@ All product commands nest under **`xgic payload`**:
 | `xgic payload dev` | **Primary daily command** — smart start (up if needed, DB check, `pnpm dev`) |
 | `xgic payload setup [--quiet]` | **First-run one-shot:** env (if missing) + DB profile + scaffold (idempotent) |
 | `xgic payload env [--json]` | Product env status (project name, `.env`, services) |
-| `xgic payload env --regenerate --yes` | Rotate `.devcontainer/.env` (`DATABASE_URL`) and sync the app `.env` (optional; setup creates env when absent). Does not rewrite an existing Compose DB volume password |
+| `xgic payload env --regenerate --yes` | Rewrite `.devcontainer/.env` (`DATABASE_URL`) and sync the app `.env` (optional; setup creates env when absent). Does **not** delete DB volume data; does **not** update the password inside an existing volume |
 | `xgic payload schema` | Run template schema generator when present |
 | `xgic payload reset` | Fast targeted reset (project folder + active DB volume) |
 

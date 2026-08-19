@@ -31,6 +31,6 @@ Public repository. Follow https://github.com/xgic/ai for multi-repo standards.
 - Use full product name **Payload CMS** in prose  
 - Product commands use space hierarchy: `xgic payload <action>` (not hyphenated top-level)  
 - Do not re-register generic `xgic env`; use `xgic payload env` for product secrets  
-- `xgic payload env --regenerate --yes` writes `.devcontainer/.env` (`DATABASE_URL`, Compose `POSTGRES_*` / `MONGO_*`, `PAYLOAD_SECRET`) and syncs the app `.env` under `projectDir` (`DATABASE_URL`, `PAYLOAD_SECRET`, `CRON_SECRET`, `PREVIEW_SECRET`). File rewrite does not change a pre-existing Compose DB volume password.  
+- `xgic payload env --regenerate --yes` writes `.devcontainer/.env` (`DATABASE_URL`, Compose `POSTGRES_*` / `MONGO_*`, `PAYLOAD_SECRET`) and syncs the app `.env` under `projectDir` (`DATABASE_URL`, `PAYLOAD_SECRET`, `CRON_SECRET`, `PREVIEW_SECRET`). File rewrite does **not** delete Compose DB volume data and does **not** change a pre-existing volume password (auth can break until `reset --yes` or an in-place role update).  
 - **PyPI releases:** https://github.com/xgic/ai/blob/main/docs/python-package-release.md (OIDC + PyPA action; `uv` build/smoke)  
 

@@ -292,4 +292,5 @@ def test_perform_env_regenerate_warns_when_volume_exists(
     combined = f"{captured.out}\n{captured.err}"
     assert "example-postgres-data" in combined
     assert "previous password" in combined
-    assert "does not change the password" in combined
+    assert "does NOT delete" in combined
+    assert "does NOT update the password" in combined

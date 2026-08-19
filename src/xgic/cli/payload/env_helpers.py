@@ -24,10 +24,13 @@ _PLACEHOLDER_RE = re.compile(
     re.IGNORECASE,
 )
 _STALE_VOLUME_WARNING = (
-    "Regenerating env files does not change the password stored in an "
-    "existing Compose database volume. Recreate the volume "
-    "(for example: xgic payload reset --yes) or update the database role "
-    "to match the new password."
+    "Regenerate rewrites credential files only — it does NOT delete "
+    "Compose database volume data. It also does NOT update the password "
+    "already stored inside that volume, so the app may fail auth until "
+    "you either (1) recreate the volume (destructive: "
+    "xgic payload reset --yes) or (2) update the database role password "
+    "to match the new files (non-destructive; tracked as a separate "
+    "rotate feature)."
 )
 
 
@@ -257,7 +260,9 @@ def _warn_stale_compose_db_volume(
         name = compose_db_volume_name(config_file=config_file)
         print_warning(
             f"{prefix}Detected existing Compose DB volume {name!r}. "
-            "It may still hold the previous password."
+            "Data in that volume is kept, but it may still hold the "
+            "previous password (connectivity can break until reset or "
+            "an in-place role password update)."
         )
     print_warning(f"{prefix}{_STALE_VOLUME_WARNING}")
 
