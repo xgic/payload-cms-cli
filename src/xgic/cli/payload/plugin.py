@@ -67,7 +67,7 @@ def register(
     penv.add_argument(
         "--regenerate",
         action="store_true",
-        help="Write fresh credentials to .devcontainer/.env",
+        help="Write fresh credentials to .devcontainer/.env and sync the app .env",
     )
     penv.add_argument(
         "--yes",
@@ -116,6 +116,6 @@ def register(
     reset.add_argument(
         "--rotate-credentials",
         action="store_true",
-        help="Also regenerate .devcontainer/.env credentials",
+        help="Also regenerate compose + app .env credentials",
     )
     reset.set_defaults(func=run_reset)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 import re
 import subprocess
 import time
@@ -19,12 +18,18 @@ from xgic.cli.payload.config import (
     get_db_profile,
     make_payload_docker_controller,
 )
+from xgic.cli.payload.env_helpers import (
+    load_live_env_from_devcontainer,
+    sync_live_env_into_project,
+)
 from xgic.cli.payload.layout import (
     create_payload_target_arg,
     display_project_location,
     resolve_project_dir,
 )
 from xgic.cli.utils.output import print_info, print_success, print_warning
+
+_sync_live_env_into_project = sync_live_env_into_project
 
 
 def load_create_payload_config(
@@ -114,80 +119,6 @@ def resolve_db_connection_string(
 ) -> str | None:
     """Prefer live env DB URI over config JSON."""
     return live_db_uri or json_db_uri or None
-
-
-def load_live_env_from_devcontainer(
-    env_file: Path = Path(".devcontainer/.env"),
-) -> tuple[str, str]:
-    """Load DATABASE_URI and PAYLOAD_SECRET from .devcontainer/.env if present."""
-    db_uri = os.environ.get("DATABASE_URI", "")
-    secret = os.environ.get("PAYLOAD_SECRET", "")
-    if (db_uri and secret) or not env_file.is_file():
-        return db_uri, secret
-    try:
-        for line in env_file.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            if key == "DATABASE_URI" and not db_uri:
-                db_uri = value
-            elif key == "PAYLOAD_SECRET" and not secret:
-                secret = value
-    except OSError:
-        pass
-    return db_uri, secret
-
-
-def compute_synced_project_env_content(
-    original_content: str, live_db_uri: str, live_payload_secret: str
-) -> str:
-    """Return .env content with live DATABASE_URL / PAYLOAD_SECRET."""
-    content = original_content
-    if live_db_uri:
-        content = re.sub(
-            r"^DATABASE_URL=.*$",
-            f"DATABASE_URL={live_db_uri}",
-            content,
-            flags=re.MULTILINE,
-        )
-        # Some templates use DATABASE_URI
-        content = re.sub(
-            r"^DATABASE_URI=.*$",
-            f"DATABASE_URI={live_db_uri}",
-            content,
-            flags=re.MULTILINE,
-        )
-    if live_payload_secret:
-        content = re.sub(
-            r"^PAYLOAD_SECRET=.*$",
-            f"PAYLOAD_SECRET={live_payload_secret}",
-            content,
-            flags=re.MULTILINE,
-        )
-    return content
-
-
-def _sync_live_env_into_project(
-    project_dir: Path, live_db_uri: str, live_payload_secret: str
-) -> None:
-    """Best-effort sync of live credentials into the generated project's .env."""
-    base = Path.cwd() if project_dir == Path(".") else project_dir
-    gen_env = base / ".env"
-    if not gen_env.is_file():
-        return
-
-    try:
-        content = gen_env.read_text(encoding="utf-8")
-        new_content = compute_synced_project_env_content(
-            content, live_db_uri, live_payload_secret
-        )
-        if new_content != content:
-            gen_env.write_text(new_content, encoding="utf-8")
-    except Exception:
-        pass
 
 
 def validate_compose_project_name(name: str) -> str:
