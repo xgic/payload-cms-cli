@@ -65,23 +65,26 @@ def _report_pnpm_exit(returncode: int, app_cwd: Path) -> int:
 
     if returncode == 0:
         # Next.js often exits 0 on SIGTERM (child exitCode null -> || 0).
-        # That is not a healthy idle end for a long-running next dev server.
+        # That is not a healthy idle end for a long-running app dev server.
         print_warning(
-            "pnpm dev exited with code 0. For a long-running Next.js dev "
-            "server this usually means the process received SIGTERM/SIGINT, "
-            "crashed during compile, or the terminal session ended — not a "
-            "normal idle shutdown."
+            "The app dev child process exited with code 0 while under "
+            "`xgic payload dev`. For a long-running Next.js server that usually means "
+            "SIGTERM/SIGINT, a compile crash, or the terminal session ended "
+            "- not a normal idle shutdown."
         )
-        print_info(f"Retry in this terminal: cd {project_hint} && pnpm dev")
+        print_info("Retry with: xgic payload dev")
         print_info(
-            "If the server dies while Compiling /, check DB connectivity, "
-            "free memory, and (on bind-mounted Windows workspaces) named "
-            "volumes for node_modules/.next."
+            f"If it stops again while Compiling / (app: {project_hint}), "
+            "check DB connectivity, free memory, and (on bind-mounted "
+            "Windows workspaces) named volumes for node_modules/.next."
         )
         return 1
 
-    print_warning(f"pnpm dev exited with code {returncode}.")
-    print_info(f"Fallback: cd {project_hint} && pnpm dev")
+    print_warning(
+        f"The app dev child process exited with code {returncode} "
+        "(launched by `xgic payload dev`)."
+    )
+    print_info("Retry with: xgic payload dev")
     return returncode or 1
 
 
