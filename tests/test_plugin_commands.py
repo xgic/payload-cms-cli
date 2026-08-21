@@ -108,6 +108,47 @@ def test_run_dev_when_ready_on_host() -> None:
         assert run_dev(ctx) == 0
         docker.exec.assert_called()
         docker.up.assert_not_called()
+        # Must not use the old trap-exit-0 shell wrapper.
+        joined = " ".join(str(a) for a in docker.exec.call_args[0])
+        assert "trap" not in joined
+        assert "exec pnpm dev" in joined
+
+
+def test_run_dev_in_container_treats_zero_exit_as_failure() -> None:
+    ns = argparse.Namespace()
+    env = EnvironmentContext(env_type=EnvironmentType.DEV_CONTAINER)
+    ctx = CommandContext(env=env, args=ns)
+    proc = MagicMock()
+    proc.wait.return_value = 0
+    proc.poll.return_value = 0
+    with (
+        patch(
+            "xgic.cli.payload.commands.dev.make_payload_docker_controller"
+        ) as make,
+        patch("xgic.cli.payload.commands.dev.db_ready", return_value=True),
+        patch(
+            "xgic.cli.payload.commands.dev.is_payload_project_complete",
+            return_value=True,
+        ),
+        patch(
+            "xgic.cli.payload.commands.dev.resolve_project_dir",
+            return_value=Path("app"),
+        ),
+        patch(
+            "xgic.cli.payload.commands.dev._app_cwd",
+            return_value=Path("/tmp/app"),
+        ),
+        patch("pathlib.Path.is_file", return_value=True),
+        patch(
+            "xgic.cli.payload.commands.dev.subprocess.Popen",
+            return_value=proc,
+        ) as popen,
+    ):
+        make.return_value = MagicMock()
+        assert run_dev(ctx) == 1
+        popen.assert_called_once()
+        assert popen.call_args.args[0] == ["pnpm", "dev"]
+        assert "trap" not in str(popen.call_args)
 
 def test_run_reset_dry_run() -> None:
     ns = argparse.Namespace(dry_run=True, yes=False, rotate_credentials=False)
