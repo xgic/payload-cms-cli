@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
+import sys
 from pathlib import Path
 
 from xgic.cli.app import CommandContext
@@ -22,11 +25,107 @@ from xgic.cli.payload.project import (
 )
 from xgic.cli.utils.output import print_info, print_success, print_warning
 
+# Exit codes commonly used when the user presses Ctrl+C / sends SIGINT.
+_SIGINT_EXIT_CODES = {130, -signal.SIGINT, 128 + signal.SIGINT}
+
 
 def _app_cwd(project_dir: Path) -> Path:
     if project_dir == Path("."):
         return Path.cwd()
     return (Path.cwd() / project_dir).resolve()
+
+
+def _terminate_pnpm(proc: subprocess.Popen[bytes]) -> None:
+    if proc.poll() is not None:
+        return
+    try:
+        if sys.platform == "win32":
+            proc.terminate()
+        else:
+            proc.send_signal(signal.SIGINT)
+    except OSError:
+        pass
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+
+
+def _report_pnpm_exit(returncode: int, app_cwd: Path) -> int:
+    try:
+        rel = Path(os.path.relpath(app_cwd, Path.cwd()))
+    except ValueError:
+        rel = app_cwd
+    project_hint = display_project_location(rel)
+
+    if returncode in _SIGINT_EXIT_CODES:
+        print_info("Development server stopped by user (Ctrl+C).")
+        return 0
+
+    if returncode == 0:
+        # Next.js often exits 0 on SIGTERM (child exitCode null -> || 0).
+        # That is not a healthy idle end for a long-running next dev server.
+        print_warning(
+            "pnpm dev exited with code 0. For a long-running Next.js dev "
+            "server this usually means the process received SIGTERM/SIGINT, "
+            "crashed during compile, or the terminal session ended — not a "
+            "normal idle shutdown."
+        )
+        print_info(f"Retry in this terminal: cd {project_hint} && pnpm dev")
+        print_info(
+            "If the server dies while Compiling /, check DB connectivity, "
+            "free memory, and (on bind-mounted Windows workspaces) named "
+            "volumes for node_modules/.next."
+        )
+        return 1
+
+    print_warning(f"pnpm dev exited with code {returncode}.")
+    print_info(f"Fallback: cd {project_hint} && pnpm dev")
+    return returncode or 1
+
+
+def _run_pnpm_dev(app_cwd: Path) -> int:
+    """Run pnpm dev in the foreground until it stops.
+
+    Do not install shell ``trap ... exit 0`` handlers: they made SIGTERM
+    stops look like a successful idle exit while the page was still
+    compiling / serving. Inherit stdio so the VS Code terminal stays attached.
+    """
+    print_info(f"Launching pnpm dev in {app_cwd}...")
+    env = os.environ.copy()
+    if env.get("CI", "").lower() in {"1", "true", "yes"}:
+        print_warning(
+            "CI=true is set in this environment; unsetting for pnpm dev "
+            "so Next.js stays in interactive watch mode."
+        )
+        env["CI"] = ""
+
+    try:
+        proc = subprocess.Popen(
+            ["pnpm", "dev"],
+            cwd=str(app_cwd),
+            env=env,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+    except FileNotFoundError:
+        print_warning(
+            "pnpm not found. Run inside the Dev Container image "
+            "(or install pnpm on PATH)."
+        )
+        return 1
+
+    try:
+        returncode = proc.wait()
+    except KeyboardInterrupt:
+        print_info("Stopping development server (Ctrl+C)...")
+        _terminate_pnpm(proc)
+        print_info("Development server stopped by user (Ctrl+C).")
+        return 0
+
+    return _report_pnpm_exit(returncode, app_cwd)
 
 
 def run_dev(ctx: CommandContext) -> int:
@@ -76,34 +175,7 @@ def run_dev(ctx: CommandContext) -> int:
         EnvironmentType.DEV_CONTAINER,
         EnvironmentType.GENERIC_CONTAINER,
     ):
-        try:
-            print_info(f"Launching pnpm dev in {app_cwd}...")
-            result = subprocess.run(
-                ["sh", "-c", 'trap "exit 0" INT TERM; exec pnpm dev'],
-                cwd=str(app_cwd),
-                check=False,
-            )
-            if result.returncode in (130, -2, 2):
-                print_info("Development server stopped by user (Ctrl+C).")
-                return 0
-            if result.returncode != 0:
-                print_warning(f"pnpm dev exited with code {result.returncode}.")
-                print_info(
-                    f"Fallback: cd {display_project_location(project_dir)} "
-                    "&& pnpm dev"
-                )
-                return result.returncode or 1
-            print_info("Development server exited cleanly.")
-            return 0
-        except KeyboardInterrupt:
-            print_info("Development server stopped by user (Ctrl+C).")
-            return 0
-        except FileNotFoundError:
-            print_warning(
-                "pnpm not found. Run inside the Dev Container image "
-                "(or install pnpm on PATH)."
-            )
-            return 1
+        return _run_pnpm_dev(app_cwd)
 
     # Host: try docker exec into primary service (optional path)
     rel = (
@@ -120,8 +192,7 @@ def run_dev(ctx: CommandContext) -> int:
             DEFAULT_PRIMARY_SERVICE,
             "sh",
             "-c",
-            f"cd /workspace/{rel} && "
-            "sh -c 'trap \"exit 0\" INT TERM; exec pnpm dev'",
+            f"cd /workspace/{rel} && exec pnpm dev",
             check=False,
         )
     except Exception as e:
