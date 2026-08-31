@@ -21,7 +21,7 @@ from xgic.cli.payload.project import (
     load_create_payload_config,
 )
 
-__version__ = "0.2.3"
+__version__ = "0.2.4rc1"
 
 __all__ = [
     "DEFAULT_COMPOSE_PROJECT",
