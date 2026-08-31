@@ -117,6 +117,27 @@ def merge_package_json_only_built(
     return json.dumps(data, indent=2) + "\n"
 
 
+def yaml_map_key(name: str) -> str:
+    """Quote YAML mapping keys that are not plain scalars (e.g. ``@swc/core``)."""
+    if not name or name[0] in "@`&*!|>%{}[]'\"" or any(
+        ch in name for ch in ":#"
+    ):
+        return json.dumps(name)
+    return name
+
+
+def parse_yaml_map_key(raw: str) -> str:
+    """Strip optional YAML quotes from a mapping key token."""
+    raw = raw.strip()
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in "\"'":
+        return raw[1:-1]
+    return raw
+
+
+def _allow_builds_block(names: list[str]) -> list[str]:
+    return ["allowBuilds:"] + [f"  {yaml_map_key(n)}: true" for n in names]
+
+
 def merge_workspace_allow_builds(
     text: str, names: tuple[str, ...] = NATIVE_PNPM_BUILDS
 ) -> str:
@@ -124,6 +145,7 @@ def merge_workspace_allow_builds(
 
     Avoids a YAML dependency: only handles the generated website-template
     shape (a top-level ``allowBuilds:`` mapping of ``name: true``).
+    Always re-emits the block so unquoted ``@`` keys from 0.2.3 are repaired.
     """
     normalized = text if text.endswith("\n") or text == "" else text + "\n"
     lines = normalized.splitlines()
@@ -132,7 +154,7 @@ def merge_workspace_allow_builds(
         None,
     )
     if start is None:
-        extra = ["allowBuilds:"] + [f"  {n}: true" for n in names]
+        extra = _allow_builds_block(list(names))
         return normalized + "\n".join(extra) + "\n"
 
     existing: list[str] = []
@@ -143,15 +165,14 @@ def merge_workspace_allow_builds(
             end += 1
             continue
         if ln.startswith(" ") or ln.startswith("\t"):
-            existing.append(ln.strip().split(":", 1)[0].strip())
+            key_raw = ln.strip().split(":", 1)[0]
+            existing.append(parse_yaml_map_key(key_raw))
             end += 1
             continue
         break
-    missing = [n for n in names if n not in existing]
-    if not missing:
-        return normalized
-    insert = [f"  {n}: true" for n in missing]
-    new_lines = lines[:end] + insert + lines[end:]
+    merged = list(dict.fromkeys([*existing, *names]))
+    block = _allow_builds_block(merged)
+    new_lines = lines[:start] + block + lines[end:]
     return "\n".join(new_lines) + "\n"
 
 
