@@ -55,7 +55,7 @@ One brand (`xgic`), clear ownership, and dry-run-friendly destructive paths.
 uv pip install \
   "xgic-cli>=0.2.0,<0.3" \
   "xgic-dev-cli>=0.2.0,<0.3" \
-  "xgic-payload-cms-cli>=0.2.3,<0.3"
+  "xgic-payload-cms-cli>=0.2.4,<0.3"
 xgic payload --help
 ```
 
