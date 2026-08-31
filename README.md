@@ -96,7 +96,7 @@ All product commands nest under **`xgic payload`**:
 | Command | Purpose |
 |---------|---------|
 | `xgic payload dev` | **Primary daily command** — smart start (up if needed, DB check, `pnpm dev`) |
-| `xgic payload setup [--quiet]` | **First-run one-shot:** env (if missing) + DB profile + scaffold (idempotent) |
+| `xgic payload setup [--quiet]` | **First-run one-shot:** env (if missing) + DB profile + scaffold (idempotent). `pnpx` is invoked with `--allow-build=@swc/core` (and other native packages) so pnpm 10+ can run generator install scripts. |
 | `xgic payload env [--json]` | Product env status (project name, `.env`, services) |
 | `xgic payload env --regenerate --yes` | Rewrite `.devcontainer/.env` (`DATABASE_URL`) and sync the app `.env` (optional; setup creates env when absent). Does **not** delete DB volume data; does **not** update the password inside an existing volume |
 | `xgic payload schema` | Run template schema generator when present |

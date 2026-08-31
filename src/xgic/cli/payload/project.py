@@ -31,6 +31,18 @@ from xgic.cli.utils.output import print_info, print_success, print_warning
 
 _sync_live_env_into_project = sync_live_env_into_project
 
+# Native packages whose install scripts pnpm 10+ otherwise skips.
+# @swc/core is required by create-payload-app itself; the rest match the
+# website template allow-list plus Next.js optional native add-ons.
+NATIVE_PNPM_BUILDS: tuple[str, ...] = (
+    "@swc/core",
+    "@parcel/watcher",
+    "esbuild",
+    "sharp",
+    "unrs-resolver",
+    "workerd",
+)
+
 
 def load_create_payload_config(
     config_path: Path = DEFAULT_CONFIG_FILE,
@@ -81,6 +93,113 @@ def is_payload_project_complete(project_dir: Path) -> bool:
     return any(p.exists() for p in candidates)
 
 
+def pnpx_allow_build_args(
+    packages: tuple[str, ...] = NATIVE_PNPM_BUILDS,
+) -> list[str]:
+    """Return ``pnpx --allow-build=…`` flags for native install scripts."""
+    return [f"--allow-build={name}" for name in packages]
+
+
+def merge_package_json_only_built(
+    text: str, names: tuple[str, ...] = NATIVE_PNPM_BUILDS
+) -> str:
+    """Return package.json text with ``pnpm.onlyBuiltDependencies`` merged."""
+    data = json.loads(text)
+    pnpm = data.setdefault("pnpm", {})
+    existing = pnpm.get("onlyBuiltDependencies") or []
+    if not isinstance(existing, list):
+        existing = []
+    str_existing = [str(item) for item in existing]
+    merged = list(dict.fromkeys([*str_existing, *names]))
+    if merged == str_existing:
+        return text
+    pnpm["onlyBuiltDependencies"] = merged
+    return json.dumps(data, indent=2) + "\n"
+
+
+def merge_workspace_allow_builds(
+    text: str, names: tuple[str, ...] = NATIVE_PNPM_BUILDS
+) -> str:
+    """Return pnpm-workspace.yaml text with ``allowBuilds`` keys merged.
+
+    Avoids a YAML dependency: only handles the generated website-template
+    shape (a top-level ``allowBuilds:`` mapping of ``name: true``).
+    """
+    normalized = text if text.endswith("\n") or text == "" else text + "\n"
+    lines = normalized.splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.startswith("allowBuilds:")),
+        None,
+    )
+    if start is None:
+        extra = ["allowBuilds:"] + [f"  {n}: true" for n in names]
+        return normalized + "\n".join(extra) + "\n"
+
+    existing: list[str] = []
+    end = start + 1
+    while end < len(lines):
+        ln = lines[end]
+        if not ln.strip():
+            end += 1
+            continue
+        if ln.startswith(" ") or ln.startswith("\t"):
+            existing.append(ln.strip().split(":", 1)[0].strip())
+            end += 1
+            continue
+        break
+    missing = [n for n in names if n not in existing]
+    if not missing:
+        return normalized
+    insert = [f"  {n}: true" for n in missing]
+    new_lines = lines[:end] + insert + lines[end:]
+    return "\n".join(new_lines) + "\n"
+
+
+def ensure_native_pnpm_builds(
+    project_dir: Path, *, quiet: bool = False
+) -> None:
+    """Allow-list native install scripts in a generated Payload CMS app."""
+    changed = False
+    workspace = project_dir / "pnpm-workspace.yaml"
+    package_json = project_dir / "package.json"
+    try:
+        if workspace.is_file():
+            old = workspace.read_text(encoding="utf-8")
+            new = merge_workspace_allow_builds(old)
+            if new != old:
+                workspace.write_text(new, encoding="utf-8")
+                changed = True
+        if package_json.is_file():
+            old = package_json.read_text(encoding="utf-8")
+            new = merge_package_json_only_built(old)
+            if new != old:
+                package_json.write_text(new, encoding="utf-8")
+                changed = True
+    except (OSError, json.JSONDecodeError) as e:
+        if not quiet:
+            print_warning(f"Could not update pnpm native allow-list: {e}")
+        return
+    if not changed:
+        return
+    if not quiet:
+        print_info(
+            "Allowing native pnpm install scripts "
+            f"({', '.join(NATIVE_PNPM_BUILDS)}) in "
+            f"{display_project_location(project_dir)}."
+        )
+    result = subprocess.run(
+        ["pnpm", "install"],
+        cwd=str(project_dir),
+        check=False,
+    )
+    if result.returncode != 0 and not quiet:
+        print_warning(
+            "pnpm install after native allow-list update exited "
+            f"{result.returncode}. Re-run inside the app directory if "
+            "install scripts were skipped."
+        )
+
+
 def build_create_payload_command(
     target: str,
     *,
@@ -92,6 +211,7 @@ def build_create_payload_command(
     """Return the argv list for a non-interactive create-payload-app run."""
     cmd = [
         "pnpx",
+        *pnpx_allow_build_args(),
         "create-payload-app@latest",
         target,
         "-t",
@@ -314,12 +434,6 @@ def ensure_payload_project(*, quiet: bool = False) -> int:
             check=False,
             capture_output=True,
         )
-    with contextlib.suppress(Exception):
-        subprocess.run(
-            ["corepack", "pnpm", "approve-builds", "@swc/core"],
-            check=False,
-            capture_output=True,
-        )
 
     cmd = build_create_payload_command(
         target,
@@ -373,5 +487,6 @@ def ensure_payload_project(*, quiet: bool = False) -> int:
             "Payload CMS project created successfully at "
             f"{display_project_location(project_dir)}."
         )
+    ensure_native_pnpm_builds(project_dir, quiet=quiet)
     _sync_live_env_into_project(project_dir, live_db_uri, live_secret)
     return 0

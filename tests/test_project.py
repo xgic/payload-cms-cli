@@ -9,11 +9,15 @@ import pytest
 
 from xgic.cli.payload.env_helpers import compute_synced_project_env_content
 from xgic.cli.payload.project import (
+    NATIVE_PNPM_BUILDS,
     build_create_payload_command,
     ensure_payload_project,
     get_project_name,
     is_payload_project_complete,
     load_create_payload_config,
+    merge_package_json_only_built,
+    merge_workspace_allow_builds,
+    pnpx_allow_build_args,
     resolve_db_connection_string,
     sync_compose_project_name,
     validate_compose_project_name,
@@ -89,10 +93,54 @@ class TestProjectPureHelpers:
         assert "app" in cmd
         assert "--use-pnpm" in cmd
         assert "--no-agent" in cmd
+        assert "--allow-build=@swc/core" in cmd
+        pkg = cmd.index("create-payload-app@latest")
+        assert cmd[0] == "pnpx"
+        assert cmd[pkg + 1] == "app"
 
     def test_build_create_payload_command_root(self) -> None:
         cmd = build_create_payload_command(".")
-        assert cmd[2] == "."
+        pkg = cmd.index("create-payload-app@latest")
+        assert cmd[pkg + 1] == "."
+
+    def test_pnpx_allow_build_args(self) -> None:
+        flags = pnpx_allow_build_args()
+        assert flags[0] == "--allow-build=@swc/core"
+        assert set(flags) == {f"--allow-build={n}" for n in NATIVE_PNPM_BUILDS}
+
+    def test_merge_package_json_only_built_adds_missing(self) -> None:
+        old = json.dumps(
+            {"name": "app", "pnpm": {"onlyBuiltDependencies": ["sharp"]}}
+        )
+        new = json.loads(merge_package_json_only_built(old))
+        deps = new["pnpm"]["onlyBuiltDependencies"]
+        assert "sharp" in deps
+        assert "@swc/core" in deps
+        assert deps.index("sharp") == 0
+
+    def test_merge_package_json_only_built_noop(self) -> None:
+        old = json.dumps(
+            {"pnpm": {"onlyBuiltDependencies": list(NATIVE_PNPM_BUILDS)}}
+        )
+        assert merge_package_json_only_built(old) == old
+
+    def test_merge_workspace_allow_builds_appends(self) -> None:
+        old = (
+            "allowBuilds:\n"
+            "  esbuild: true\n"
+            "  sharp: true\n"
+            "  unrs-resolver: true\n"
+            "  workerd: true\n"
+        )
+        new = merge_workspace_allow_builds(old)
+        assert "  @swc/core: true\n" in new
+        assert "  @parcel/watcher: true\n" in new
+        assert "  esbuild: true\n" in new
+
+    def test_merge_workspace_allow_builds_creates_block(self) -> None:
+        new = merge_workspace_allow_builds("packages:\n  - .\n")
+        assert new.startswith("packages:\n  - .\nallowBuilds:\n")
+        assert "  @swc/core: true\n" in new
 
     def test_ensure_idempotent_on_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

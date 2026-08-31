@@ -78,6 +78,10 @@ def run_dev(ctx: CommandContext) -> int:
     ):
         try:
             print_info(f"Launching pnpm dev in {app_cwd}...")
+            print_info(
+                "First HTTP request compiles the website template "
+                "(cold Turbopack); later requests are much faster."
+            )
             result = subprocess.run(
                 ["sh", "-c", 'trap "exit 0" INT TERM; exec pnpm dev'],
                 cwd=str(app_cwd),
