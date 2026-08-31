@@ -17,10 +17,12 @@ from xgic.cli.payload.project import (
     load_create_payload_config,
     merge_package_json_only_built,
     merge_workspace_allow_builds,
+    parse_yaml_map_key,
     pnpx_allow_build_args,
     resolve_db_connection_string,
     sync_compose_project_name,
     validate_compose_project_name,
+    yaml_map_key,
 )
 
 
@@ -124,6 +126,12 @@ class TestProjectPureHelpers:
         )
         assert merge_package_json_only_built(old) == old
 
+    def test_yaml_map_key_quotes_scoped_names(self) -> None:
+        assert yaml_map_key("esbuild") == "esbuild"
+        assert yaml_map_key("@swc/core") == '"@swc/core"'
+        assert parse_yaml_map_key('"@swc/core"') == "@swc/core"
+        assert parse_yaml_map_key("esbuild") == "esbuild"
+
     def test_merge_workspace_allow_builds_appends(self) -> None:
         old = (
             "allowBuilds:\n"
@@ -133,14 +141,27 @@ class TestProjectPureHelpers:
             "  workerd: true\n"
         )
         new = merge_workspace_allow_builds(old)
-        assert "  @swc/core: true\n" in new
-        assert "  @parcel/watcher: true\n" in new
+        assert '  "@swc/core": true\n' in new
+        assert '  "@parcel/watcher": true\n' in new
+        assert "  @swc/core: true\n" not in new
         assert "  esbuild: true\n" in new
+
+    def test_merge_workspace_allow_builds_repairs_unquoted_at_keys(
+        self,
+    ) -> None:
+        old = (
+            "allowBuilds:\n"
+            "  esbuild: true\n"
+            "  @swc/core: true\n"
+        )
+        new = merge_workspace_allow_builds(old)
+        assert '  "@swc/core": true\n' in new
+        assert "  @swc/core: true\n" not in new
 
     def test_merge_workspace_allow_builds_creates_block(self) -> None:
         new = merge_workspace_allow_builds("packages:\n  - .\n")
         assert new.startswith("packages:\n  - .\nallowBuilds:\n")
-        assert "  @swc/core: true\n" in new
+        assert '  "@swc/core": true\n' in new
 
     def test_ensure_idempotent_on_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
