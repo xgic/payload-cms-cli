@@ -1,6 +1,7 @@
 """XGIC CLI Payload CMS module (``xgic.cli.payload``)."""
 
 from xgic.cli.payload.config import (
+    DEFAULT_ADMIN_EMAIL,
     DEFAULT_COMPOSE_PROJECT,
     DEFAULT_CONFIG_FILE,
     DEFAULT_PRIMARY_SERVICE,
@@ -24,6 +25,7 @@ from xgic.cli.payload.project import (
 __version__ = "0.2.5"
 
 __all__ = [
+    "DEFAULT_ADMIN_EMAIL",
     "DEFAULT_COMPOSE_PROJECT",
     "DEFAULT_CONFIG_FILE",
     "DEFAULT_PRIMARY_SERVICE",

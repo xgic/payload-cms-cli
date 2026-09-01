@@ -102,6 +102,8 @@ def test_run_dev_when_ready_on_host() -> None:
             return_value=Path("/tmp/app"),
         ),
         patch("pathlib.Path.is_file", return_value=True),
+        patch("xgic.cli.payload.admin_bootstrap.apply_admin_dev_login"),
+        patch("xgic.cli.payload.admin_bootstrap.spawn_first_admin_guard"),
     ):
         docker = MagicMock()
         docker.exec.return_value = MagicMock(returncode=0)
@@ -140,6 +142,8 @@ def test_run_dev_in_container_treats_zero_exit_as_failure() -> None:
             return_value=Path("/tmp/app"),
         ),
         patch("pathlib.Path.is_file", return_value=True),
+        patch("xgic.cli.payload.admin_bootstrap.apply_admin_dev_login"),
+        patch("xgic.cli.payload.admin_bootstrap.spawn_first_admin_guard"),
         patch(
             "xgic.cli.payload.commands.dev.subprocess.Popen",
             return_value=proc,

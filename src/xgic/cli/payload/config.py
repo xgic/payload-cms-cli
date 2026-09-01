@@ -18,6 +18,7 @@ DEFAULT_COMPOSE_PROJECT = "xgic-payload-cms-dev"
 DEFAULT_PRIMARY_SERVICE = "xgic-payload-cms-dev"
 DEFAULT_CONFIG_FILE = Path(".devcontainer/create-payload-config.json")
 DEFAULT_COMPOSE_FILE = ".devcontainer/docker-compose.yml"
+DEFAULT_ADMIN_EMAIL = "admin@example.com"
 
 
 def get_payload_project_name(
@@ -138,6 +139,21 @@ def get_db_config(
         return db_name, db_user
     except Exception:
         return default_db, default_user
+
+
+def get_admin_email(config_file: Path = DEFAULT_CONFIG_FILE) -> str:
+    """Return adminEmail from create-payload-config.json."""
+    if not config_file.exists():
+        return DEFAULT_ADMIN_EMAIL
+    try:
+        with config_file.open(encoding="utf-8") as f:
+            cfg: dict[str, Any] = json.load(f)
+        raw = cfg.get("adminEmail")
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+    except Exception:
+        pass
+    return DEFAULT_ADMIN_EMAIL
 
 
 def get_db_profile(config_file: Path = DEFAULT_CONFIG_FILE) -> str:

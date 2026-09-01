@@ -57,6 +57,7 @@ def load_create_payload_config(
         "dbAdapter": "postgres",
         "agent": "none",
         "dbUri": "",
+        "adminEmail": "admin@example.com",
     }
     if not config_path.exists():
         return defaults
@@ -470,6 +471,9 @@ def ensure_payload_project(*, quiet: bool = False) -> int:
                 f"{display_project_location(project_dir)}."
             )
         db_rc = ensure_db_services(quiet=quiet)
+        from xgic.cli.payload.admin_bootstrap import apply_admin_dev_login
+
+        apply_admin_dev_login(project_dir, quiet=quiet)
         return db_rc if db_rc != 0 else 0
 
     if project_dir != Path(".") and project_dir.exists() and not quiet:
@@ -555,4 +559,7 @@ def ensure_payload_project(*, quiet: bool = False) -> int:
         )
     ensure_native_pnpm_builds(project_dir, quiet=quiet)
     _sync_live_env_into_project(project_dir, live_db_uri, live_secret)
+    from xgic.cli.payload.admin_bootstrap import apply_admin_dev_login
+
+    apply_admin_dev_login(project_dir, quiet=quiet)
     return 0

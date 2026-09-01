@@ -6,11 +6,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from xgic.cli.payload.config import (
+    DEFAULT_ADMIN_EMAIL,
     DEFAULT_COMPOSE_FILE,
     DEFAULT_COMPOSE_PROJECT,
     DEFAULT_CONFIG_FILE,
     DEFAULT_PRIMARY_SERVICE,
     db_ready,
+    get_admin_email,
     get_compose_project_name,
     get_db_config,
     get_db_profile,
@@ -24,6 +26,14 @@ def test_compose_defaults_match_template_contract() -> None:
     assert DEFAULT_PRIMARY_SERVICE == "xgic-payload-cms-dev"
     assert DEFAULT_COMPOSE_FILE == ".devcontainer/docker-compose.yml"
     assert DEFAULT_CONFIG_FILE.as_posix() == ".devcontainer/create-payload-config.json"
+    assert DEFAULT_ADMIN_EMAIL == "admin@example.com"
+
+
+def test_get_admin_email_from_config(tmp_path: Path) -> None:
+    cfg = tmp_path / "create-payload-config.json"
+    cfg.write_text('{"adminEmail": "ops@example.com"}', encoding="utf-8")
+    assert get_admin_email(cfg) == "ops@example.com"
+    assert get_admin_email(tmp_path / "missing.json") == DEFAULT_ADMIN_EMAIL
 
 
 def test_get_compose_project_name_from_config(tmp_path, monkeypatch) -> None:

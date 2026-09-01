@@ -31,8 +31,30 @@ def test_generate_fresh_env_content_postgres(tmp_path: Path) -> None:
     assert "PGUSER=me" in content
     assert "PGDATABASE=mydb" in content
     assert "PAYLOAD_SECRET=" in content
+    assert "PAYLOAD_ADMIN_EMAIL=" in content
+    assert "PAYLOAD_ADMIN_PASSWORD=" in content
     assert "DATABASE_URL=postgres://" in content
     assert "DATABASE_URI=" not in content
+    parsed = parse_dotenv(content)
+    assert parsed["PAYLOAD_ADMIN_EMAIL"] == "admin@example.com"
+    assert parsed["PAYLOAD_ADMIN_PASSWORD"]
+
+
+def test_generate_fresh_env_content_preserves_admin_password(tmp_path: Path) -> None:
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text(
+        '{"dbAdapter": "postgres", "adminEmail": "keep@example.com"}'
+    )
+    content = generate_fresh_env_content(
+        config_file=cfg,
+        preserve={
+            "PAYLOAD_ADMIN_EMAIL": "keep@example.com",
+            "PAYLOAD_ADMIN_PASSWORD": "keep-pass",
+        },
+    )
+    parsed = parse_dotenv(content)
+    assert parsed["PAYLOAD_ADMIN_EMAIL"] == "keep@example.com"
+    assert parsed["PAYLOAD_ADMIN_PASSWORD"] == "keep-pass"
 
 
 def test_generate_fresh_env_content_mongodb(tmp_path: Path) -> None:
@@ -43,6 +65,7 @@ def test_generate_fresh_env_content_mongodb(tmp_path: Path) -> None:
     content = generate_fresh_env_content(config_file=cfg)
     assert "MONGO_INITDB_ROOT_USERNAME=mu" in content
     assert "PAYLOAD_SECRET=" in content
+    assert "PAYLOAD_ADMIN_EMAIL=" in content
     assert "DATABASE_URL=mongodb://" in content
     assert "DATABASE_URI=" not in content
 

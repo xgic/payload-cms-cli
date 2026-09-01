@@ -10,6 +10,7 @@ from pathlib import Path
 
 from xgic.cli.payload.config import (
     DEFAULT_CONFIG_FILE,
+    get_admin_email,
     get_compose_project_name,
     get_db_config,
     get_db_profile,
@@ -37,11 +38,19 @@ _STALE_VOLUME_WARNING = (
 def generate_fresh_env_content(
     *,
     config_file: Path = DEFAULT_CONFIG_FILE,
+    preserve: dict[str, str] | None = None,
 ) -> str:
     """Pure: return compose .env content with fresh secrets + db from config."""
     db_name, db_user = get_db_config(config_file)
     payload_secret = secrets.token_hex(32)
     adapter = get_db_profile(config_file)
+    kept = preserve or {}
+    admin_email = kept.get("PAYLOAD_ADMIN_EMAIL") or get_admin_email(config_file)
+    if looks_like_placeholder(admin_email):
+        admin_email = get_admin_email(config_file)
+    admin_password = kept.get("PAYLOAD_ADMIN_PASSWORD") or secrets.token_urlsafe(24)
+    if looks_like_placeholder(admin_password):
+        admin_password = secrets.token_urlsafe(24)
 
     if adapter == "mongodb":
         mongo_pass = secrets.token_hex(16)
@@ -49,6 +58,8 @@ def generate_fresh_env_content(
 MONGO_INITDB_ROOT_PASSWORD={mongo_pass}
 MONGO_INITDB_DATABASE={db_name}
 PAYLOAD_SECRET={payload_secret}
+PAYLOAD_ADMIN_EMAIL={admin_email}
+PAYLOAD_ADMIN_PASSWORD={admin_password}
 DATABASE_URL=mongodb://{db_user}:{mongo_pass}@mongodb:27017/{db_name}?authSource=admin
 """
 
@@ -62,6 +73,8 @@ POSTGRES_DB={db_name}
 PGUSER={db_user}
 PGDATABASE={db_name}
 PAYLOAD_SECRET={payload_secret}
+PAYLOAD_ADMIN_EMAIL={admin_email}
+PAYLOAD_ADMIN_PASSWORD={admin_password}
 DATABASE_URL=postgres://{db_user}:{pg_pass}@postgres:5432/{db_name}
 """
 
@@ -282,7 +295,15 @@ def perform_env_regenerate(
     """Regenerate compose .env and sync the Payload app .env (guarded)."""
     from xgic.cli.payload.project import is_payload_project_complete
 
-    content = generate_fresh_env_content(config_file=config_file)
+    existing: dict[str, str] = {}
+    if env_file.is_file():
+        try:
+            existing = parse_dotenv(env_file.read_text(encoding="utf-8"))
+        except OSError:
+            existing = {}
+    content = generate_fresh_env_content(
+        config_file=config_file, preserve=existing
+    )
     env_existed = env_file.is_file()
     app_env = _resolve_app_env_path(config_file, env_file)
     would_sync = app_env.is_file() or is_payload_project_complete(app_env.parent)
