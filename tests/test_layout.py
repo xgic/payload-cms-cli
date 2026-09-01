@@ -7,6 +7,7 @@ from pathlib import Path
 from xgic.cli.payload.layout import (
     create_payload_target_arg,
     is_producer_repo,
+    is_workspace_root,
     normalize_layout,
     resolve_project_dir,
 )
@@ -56,3 +57,9 @@ def test_auto_template(tmp_path: Path) -> None:
 def test_create_payload_target_arg() -> None:
     assert create_payload_target_arg(Path(".")) == "."
     assert create_payload_target_arg(Path("app")) == "app"
+
+
+def test_is_workspace_root() -> None:
+    assert is_workspace_root(Path(".")) is True
+    assert is_workspace_root(Path("./")) is True
+    assert is_workspace_root(Path("app")) is False

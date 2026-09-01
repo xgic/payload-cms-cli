@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -174,3 +175,131 @@ def test_run_reset_requires_yes() -> None:
     ) as make:
         make.return_value = MagicMock()
         assert run_reset(ctx) == 1
+
+
+def test_run_reset_dry_run_uses_project_dir(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text(
+        json.dumps(
+            {
+                "projectName": "my-payload-cms",
+                "projectDir": "app",
+                "layout": "subdir",
+            }
+        )
+    )
+    monkeypatch.chdir(tmp_path)  # type: ignore[attr-defined]
+    ns = argparse.Namespace(dry_run=True, yes=False, rotate_credentials=False)
+    ctx = CommandContext(
+        env=EnvironmentContext(env_type=EnvironmentType.HOST),
+        args=ns,
+    )
+    docker = MagicMock()
+    docker.db_volume_name.return_value = "xgic-payload-cms-dev-postgres-data"
+    with (
+        patch(
+            "xgic.cli.payload.commands.reset.make_payload_docker_controller",
+            return_value=docker,
+        ),
+        patch("xgic.cli.payload.commands.reset.print_info") as info,
+    ):
+        assert run_reset(ctx) == 0
+    messages = [str(c.args[0]) for c in info.call_args_list]
+    assert any("Delete directory: app/" in m for m in messages)
+    assert not any("Delete directory: my-payload-cms" in m for m in messages)
+
+
+def test_run_reset_yes_deletes_app_not_project_name(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text(
+        json.dumps(
+            {
+                "projectName": "my-payload-cms",
+                "projectDir": "app",
+                "layout": "subdir",
+            }
+        )
+    )
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "payload.config.ts").write_text("// x\n")
+    named = tmp_path / "my-payload-cms"
+    named.mkdir()
+    (named / "keep.txt").write_text("safe\n")
+    monkeypatch.chdir(tmp_path)  # type: ignore[attr-defined]
+    ns = argparse.Namespace(dry_run=False, yes=True, rotate_credentials=False)
+    ctx = CommandContext(
+        env=EnvironmentContext(env_type=EnvironmentType.HOST),
+        args=ns,
+    )
+    docker = MagicMock()
+    docker.db_volume_name.return_value = "vol"
+    docker.remove_volume.return_value = True
+    docker.get_db_config = MagicMock()
+    with (
+        patch(
+            "xgic.cli.payload.commands.reset.make_payload_docker_controller",
+            return_value=docker,
+        ),
+        patch(
+            "xgic.cli.payload.commands.reset.get_db_config",
+            return_value=("payload_db", "payload"),
+        ),
+        patch(
+            "xgic.cli.payload.commands.reset.ensure_payload_project",
+            return_value=0,
+        ),
+    ):
+        assert run_reset(ctx) == 0
+    assert not app.exists()
+    assert named.is_dir()
+    assert (named / "keep.txt").is_file()
+
+
+def test_run_reset_app_root_does_not_delete_workspace(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    (tmp_path / ".devcontainer").mkdir()
+    (tmp_path / ".devcontainer" / "create-payload-config.json").write_text(
+        json.dumps(
+            {
+                "projectName": "my-payload-cms",
+                "projectDir": ".",
+                "layout": "app-root",
+            }
+        )
+    )
+    (tmp_path / "payload.config.ts").write_text("// app-root\n")
+    monkeypatch.chdir(tmp_path)  # type: ignore[attr-defined]
+    ns = argparse.Namespace(dry_run=False, yes=True, rotate_credentials=False)
+    ctx = CommandContext(
+        env=EnvironmentContext(env_type=EnvironmentType.HOST),
+        args=ns,
+    )
+    docker = MagicMock()
+    docker.db_volume_name.return_value = "vol"
+    docker.remove_volume.return_value = True
+    with (
+        patch(
+            "xgic.cli.payload.commands.reset.make_payload_docker_controller",
+            return_value=docker,
+        ),
+        patch(
+            "xgic.cli.payload.commands.reset.get_db_config",
+            return_value=("payload_db", "payload"),
+        ),
+        patch(
+            "xgic.cli.payload.commands.reset.ensure_payload_project",
+            return_value=0,
+        ),
+        patch("xgic.cli.payload.commands.reset.print_info") as info,
+    ):
+        assert run_reset(ctx) == 0
+    assert (tmp_path / "payload.config.ts").is_file()
+    assert (tmp_path / ".devcontainer").is_dir()
+    messages = [str(c.args[0]) for c in info.call_args_list]
+    assert any("Skip project directory delete" in m for m in messages)

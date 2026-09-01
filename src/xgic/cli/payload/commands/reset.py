@@ -3,23 +3,31 @@
 from __future__ import annotations
 
 import shutil
-from pathlib import Path
 
 from xgic.cli.app import CommandContext
 from xgic.cli.payload.config import (
     get_db_config,
     get_db_profile,
-    get_payload_project_name,
     make_payload_docker_controller,
 )
 from xgic.cli.payload.env_helpers import perform_env_regenerate
-from xgic.cli.payload.project import ensure_payload_project
+from xgic.cli.payload.layout import (
+    display_project_location,
+    is_workspace_root,
+    resolve_project_dir,
+)
+from xgic.cli.payload.project import (
+    ensure_payload_project,
+    load_create_payload_config,
+)
 from xgic.cli.utils.output import print_info, print_success, print_warning
 
 
 def run_reset(ctx: CommandContext) -> int:
     """Delete generated project folder and reset the active DB volume.
 
+    Uses ``projectDir`` (same resolver as setup), not ``projectName``.
+    App-root layout (workspace ``.``) is never ``rmtree``'d.
     Credentials in ``.env`` are left alone unless ``--rotate-credentials``.
     """
     dry_run = bool(getattr(ctx.args, "dry_run", False))
@@ -27,13 +35,20 @@ def run_reset(ctx: CommandContext) -> int:
     rotate = bool(getattr(ctx.args, "rotate_credentials", False))
 
     docker = make_payload_docker_controller(ctx.env)
-    payload_project = get_payload_project_name()
-    project_path = Path(payload_project)
+    project_dir = resolve_project_dir(load_create_payload_config())
+    skip_dir = is_workspace_root(project_dir)
+    location = display_project_location(project_dir)
     db_service = get_db_profile()
     db_volume = docker.db_volume_name(db_service)
 
     print_info("Planned actions for reset:")
-    print_info(f"  - Delete directory: {project_path}")
+    if skip_dir:
+        print_info(
+            "  - Skip project directory delete "
+            f"({location} is the workspace; not removing .git / .devcontainer)"
+        )
+    else:
+        print_info(f"  - Delete directory: {location}")
     print_info(f"  - Remove Docker volume: {db_volume}")
     if rotate:
         print_warning("  - ALSO rotate database credentials (DANGEROUS)")
@@ -50,11 +65,16 @@ def run_reset(ctx: CommandContext) -> int:
 
     print_info("Performing reset...")
 
-    if project_path.exists():
-        shutil.rmtree(project_path)
-        print_success(f"Deleted project directory: {project_path}")
+    if skip_dir:
+        print_info(
+            "App-root layout: left workspace files in place. "
+            "Remove generated app sources manually if you need a clean scaffold."
+        )
+    elif project_dir.exists():
+        shutil.rmtree(project_dir)
+        print_success(f"Deleted project directory: {location}")
     else:
-        print_info(f"Project directory {project_path} did not exist.")
+        print_info(f"Project directory {location} did not exist.")
 
     docker.rm_service(db_service, force=True, stop=True, remove_volumes=False)
 

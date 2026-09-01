@@ -11,6 +11,8 @@ from xgic.cli.payload.env_helpers import compute_synced_project_env_content
 from xgic.cli.payload.project import (
     NATIVE_PNPM_BUILDS,
     build_create_payload_command,
+    detect_pnpm_major,
+    ensure_native_pnpm_builds,
     ensure_payload_project,
     get_project_name,
     is_payload_project_complete,
@@ -20,6 +22,7 @@ from xgic.cli.payload.project import (
     parse_yaml_map_key,
     pnpx_allow_build_args,
     resolve_db_connection_string,
+    strip_package_json_only_built,
     sync_compose_project_name,
     validate_compose_project_name,
     yaml_map_key,
@@ -162,6 +165,90 @@ class TestProjectPureHelpers:
         new = merge_workspace_allow_builds("packages:\n  - .\n")
         assert new.startswith("packages:\n  - .\nallowBuilds:\n")
         assert '  "@swc/core": true\n' in new
+
+    def test_strip_package_json_only_built_removes_empty_pnpm(self) -> None:
+        old = json.dumps(
+            {"name": "app", "pnpm": {"onlyBuiltDependencies": ["sharp"]}}
+        )
+        new = json.loads(strip_package_json_only_built(old))
+        assert "pnpm" not in new
+        assert new["name"] == "app"
+
+    def test_strip_package_json_only_built_keeps_other_keys(self) -> None:
+        old = json.dumps(
+            {
+                "pnpm": {
+                    "onlyBuiltDependencies": ["sharp"],
+                    "overrides": {"x": "1"},
+                }
+            }
+        )
+        new = json.loads(strip_package_json_only_built(old))
+        assert "onlyBuiltDependencies" not in new["pnpm"]
+        assert new["pnpm"]["overrides"] == {"x": "1"}
+
+    def test_detect_pnpm_major(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _Proc:
+            returncode = 0
+            stdout = "11.25.0\n"
+
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.subprocess.run",
+            lambda *a, **k: _Proc(),
+        )
+        assert detect_pnpm_major() == 11
+
+    def test_ensure_pnpm11_workspace_strips_package_json(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        proj = tmp_path / "app"
+        proj.mkdir()
+        (proj / "package.json").write_text(
+            json.dumps(
+                {"name": "app", "pnpm": {"onlyBuiltDependencies": ["sharp"]}}
+            )
+        )
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.detect_pnpm_major", lambda: 11
+        )
+
+        class _Proc:
+            returncode = 0
+
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.subprocess.run",
+            lambda *a, **k: _Proc(),
+        )
+        ensure_native_pnpm_builds(proj, quiet=True)
+        ws = (proj / "pnpm-workspace.yaml").read_text(encoding="utf-8")
+        assert "allowBuilds:" in ws
+        assert '"@swc/core": true' in ws
+        pkg = json.loads((proj / "package.json").read_text(encoding="utf-8"))
+        assert "pnpm" not in pkg
+
+    def test_ensure_pnpm10_writes_package_json_not_workspace(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        proj = tmp_path / "app"
+        proj.mkdir()
+        (proj / "package.json").write_text(json.dumps({"name": "app"}))
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.detect_pnpm_major", lambda: 10
+        )
+
+        class _Proc:
+            returncode = 0
+
+        monkeypatch.setattr(
+            "xgic.cli.payload.project.subprocess.run",
+            lambda *a, **k: _Proc(),
+        )
+        ensure_native_pnpm_builds(proj, quiet=True)
+        pkg = json.loads((proj / "package.json").read_text(encoding="utf-8"))
+        assert "@swc/core" in pkg["pnpm"]["onlyBuiltDependencies"]
+        assert not (proj / "pnpm-workspace.yaml").is_file()
 
     def test_ensure_idempotent_on_complete(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
