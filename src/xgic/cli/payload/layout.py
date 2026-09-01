@@ -83,8 +83,13 @@ def create_payload_target_arg(project_dir: Path) -> str:
     return project_dir.as_posix().strip("/")
 
 
+def is_workspace_root(project_dir: Path) -> bool:
+    """Return True when *project_dir* is the workspace root (app-root layout)."""
+    return project_dir == Path(".") or str(project_dir).strip() in (".", "./", "")
+
+
 def display_project_location(project_dir: Path) -> str:
     """Human-readable location for logs."""
-    if project_dir == Path("."):
+    if is_workspace_root(project_dir):
         return "workspace root (.)"
     return f"{project_dir.as_posix()}/"

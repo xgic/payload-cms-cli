@@ -100,6 +100,25 @@ def pnpx_allow_build_args(
     return [f"--allow-build={name}" for name in packages]
 
 
+def detect_pnpm_major() -> int | None:
+    """Return the major version of ``pnpm`` on PATH, or None if unknown."""
+    try:
+        result = subprocess.run(
+            ["pnpm", "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    first = result.stdout.strip().split(".", 1)[0]
+    if first.isdigit():
+        return int(first)
+    return None
+
+
 def merge_package_json_only_built(
     text: str, names: tuple[str, ...] = NATIVE_PNPM_BUILDS
 ) -> str:
@@ -114,6 +133,20 @@ def merge_package_json_only_built(
     if merged == str_existing:
         return text
     pnpm["onlyBuiltDependencies"] = merged
+    return json.dumps(data, indent=2) + "\n"
+
+
+def strip_package_json_only_built(text: str) -> str:
+    """Remove ``pnpm.onlyBuiltDependencies`` (pnpm 11+ ignores that field)."""
+    data = json.loads(text)
+    pnpm = data.get("pnpm")
+    if not isinstance(pnpm, dict) or "onlyBuiltDependencies" not in pnpm:
+        return text
+    pnpm.pop("onlyBuiltDependencies", None)
+    if pnpm:
+        data["pnpm"] = pnpm
+    else:
+        data.pop("pnpm", None)
     return json.dumps(data, indent=2) + "\n"
 
 
@@ -179,20 +212,32 @@ def merge_workspace_allow_builds(
 def ensure_native_pnpm_builds(
     project_dir: Path, *, quiet: bool = False
 ) -> None:
-    """Allow-list native install scripts in a generated Payload CMS app."""
+    """Allow-list native install scripts in a generated Payload CMS app.
+
+    pnpm 10 reads ``package.json#pnpm.onlyBuiltDependencies``. pnpm 11+
+    ignores that field and uses ``pnpm-workspace.yaml`` ``allowBuilds``.
+    """
     changed = False
     workspace = project_dir / "pnpm-workspace.yaml"
     package_json = project_dir / "package.json"
+    major = detect_pnpm_major()
     try:
-        if workspace.is_file():
-            old = workspace.read_text(encoding="utf-8")
+        if workspace.is_file() or (major is not None and major >= 11):
+            old = (
+                workspace.read_text(encoding="utf-8")
+                if workspace.is_file()
+                else ""
+            )
             new = merge_workspace_allow_builds(old)
             if new != old:
                 workspace.write_text(new, encoding="utf-8")
                 changed = True
         if package_json.is_file():
             old = package_json.read_text(encoding="utf-8")
-            new = merge_package_json_only_built(old)
+            if major is not None and major >= 11:
+                new = strip_package_json_only_built(old)
+            else:
+                new = merge_package_json_only_built(old)
             if new != old:
                 package_json.write_text(new, encoding="utf-8")
                 changed = True
