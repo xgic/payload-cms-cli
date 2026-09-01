@@ -191,8 +191,10 @@ def db_ready(
         except Exception:
             return False
 
-    _, db_user = get_db_config(config_file)
+    db_name, db_user = get_db_config(config_file)
     try:
+        # -d is required: libpq defaults the database name to the user
+        # (POSTGRES_USER=payload) while POSTGRES_DB is payload_db.
         result = docker._run_compose(  # noqa: SLF001
             "exec",
             "-T",
@@ -200,6 +202,8 @@ def db_ready(
             "pg_isready",
             "-U",
             db_user,
+            "-d",
+            db_name,
             capture_output=True,
             check=False,
         )
