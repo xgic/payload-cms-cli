@@ -178,10 +178,18 @@ def run_dev(ctx: CommandContext) -> int:
         print_warning(f"No package.json under {app_cwd}")
         return 1
 
+    from xgic.cli.payload.admin_bootstrap import (
+        apply_admin_dev_login,
+        spawn_first_admin_guard,
+    )
+
+    apply_admin_dev_login(project_dir, quiet=False)
+
     if env.env_type in (
         EnvironmentType.DEV_CONTAINER,
         EnvironmentType.GENERIC_CONTAINER,
     ):
+        spawn_first_admin_guard()
         return _run_pnpm_dev(app_cwd)
 
     # Host: try docker exec into primary service (optional path)
@@ -195,6 +203,7 @@ def run_dev(ctx: CommandContext) -> int:
             f"Launching pnpm dev via container service "
             f"{DEFAULT_PRIMARY_SERVICE!r}..."
         )
+        spawn_first_admin_guard()
         docker.exec(
             DEFAULT_PRIMARY_SERVICE,
             "sh",

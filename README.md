@@ -70,7 +70,7 @@ xgic payload --help
 
 ### Typical Payload session (inside a Dev Container)
 
-**First session** (one setup command — creates `.devcontainer/.env` if missing, starts the DB profile, scaffolds the app):
+**First session** (one setup command — creates `.devcontainer/.env` if missing, starts the DB profile, scaffolds the app, and enables development admin autoLogin so `/admin` is not a blank Next.js 16 RSC shell):
 
 ```bash
 xgic payload setup
