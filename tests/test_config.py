@@ -71,6 +71,14 @@ def test_get_db_config(tmp_path: Path) -> None:
     assert get_db_config(tmp_path / "no.json") == ("payload_db", "payload")
 
 
+def test_get_db_config_does_not_ignore_explicit_dbname(tmp_path: Path) -> None:
+    cfg = tmp_path / "cfg.json"
+    cfg.write_text(
+        '{"dbName": "custom_db", "dbUser": "custom_user", "dbUri": ""}'
+    )
+    assert get_db_config(cfg) == ("custom_db", "custom_user")
+
+
 def test_get_db_profile(tmp_path: Path) -> None:
     cfg = tmp_path / "cfg.json"
     cfg.write_text('{"dbAdapter": "mongodb"}')
