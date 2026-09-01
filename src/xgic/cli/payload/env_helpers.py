@@ -53,9 +53,14 @@ DATABASE_URL=mongodb://{db_user}:{mongo_pass}@mongodb:27017/{db_name}?authSource
 """
 
     pg_pass = secrets.token_hex(16)
+    # PGUSER/PGDATABASE are libpq defaults. Without them, `pg_isready -U payload`
+    # and other clients open a database named after the user (`payload`) while
+    # POSTGRES_DB is `payload_db`.
     return f"""POSTGRES_USER={db_user}
 POSTGRES_PASSWORD={pg_pass}
 POSTGRES_DB={db_name}
+PGUSER={db_user}
+PGDATABASE={db_name}
 PAYLOAD_SECRET={payload_secret}
 DATABASE_URL=postgres://{db_user}:{pg_pass}@postgres:5432/{db_name}
 """

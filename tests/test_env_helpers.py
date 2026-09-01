@@ -28,6 +28,8 @@ def test_generate_fresh_env_content_postgres(tmp_path: Path) -> None:
     content = generate_fresh_env_content(config_file=cfg)
     assert "POSTGRES_USER=me" in content
     assert "POSTGRES_DB=mydb" in content
+    assert "PGUSER=me" in content
+    assert "PGDATABASE=mydb" in content
     assert "PAYLOAD_SECRET=" in content
     assert "DATABASE_URL=postgres://" in content
     assert "DATABASE_URI=" not in content
