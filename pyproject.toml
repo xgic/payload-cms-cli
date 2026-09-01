@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "xgic-payload-cms-cli"
-version = "0.2.5"
+version = "0.2.6rc1"
 description = "XGIC CLI Payload CMS module - product commands and helpers (xgic.cli.payload)."
 readme = "README.md"
 license = { text = "Apache-2.0" }
