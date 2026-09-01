@@ -22,7 +22,7 @@ from xgic.cli.payload.project import (
     load_create_payload_config,
 )
 
-__version__ = "0.2.6rc1"
+__version__ = "0.2.6"
 
 __all__ = [
     "DEFAULT_ADMIN_EMAIL",
