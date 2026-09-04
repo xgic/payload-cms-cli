@@ -26,5 +26,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Lockfile: this repo is a PyPI library/CLI module, not an application.
+# Applications should commit uv.lock; libraries gitignore it.
+uv.lock
+
 # .xgic/ directory for temporary Grok Build status reports (mandatory per new standard). All reports are temporary working artifacts only and must never be committed. This is required for the mandatory session status report functionality.
 .xgic/
